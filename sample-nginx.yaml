@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /foo
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-rpm: "600"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: my-basic-auth-secret
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/24, 192.168.1.1
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60s"
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "50"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.example.com/check"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Foo "bar";
+      proxy_set_header X-Baz "qux";
+      more_set_headers "Server: my-server";
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.example.com/check"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Foo "bar";
+      proxy_set_header X-Baz "qux";
+      more_set_headers "Server: my-server";
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /bar
+        pathType: Prefix
+        backend:
+          service:
+            name: service1
+            port:
+              number: 80

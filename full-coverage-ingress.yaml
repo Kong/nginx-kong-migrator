@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: full-coverage
+  namespace: defaults
+  annotations:
+    # --- Routing & Redirects ---
+    # Simplified for basic mapper validation
+    # nginx.ingress.kubernetes.io/rewrite-target: "/echo"  # Causes KIC error in default Env
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" # Backend is HTTP echo server
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: "true"
+
+    # --- Traffic Limits ---
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-rpm: "600"
+    # nginx.ingress.kubernetes.io/limit-connections: "20" # Expect warning
+
+    # --- Auth ---
+    nginx.ingress.kubernetes.io/auth-signin: "https://login.example.com/oauth2/start?rd=$escaped_request_uri"
+    # nginx.ingress.kubernetes.io/auth-url: "http://auth-service.defaults.svc.cluster.local/auth" # Conflict with OIDC in this tool's logic (one wins)
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-User, X-Auth-Token"
+    
+    # --- Caching (Enterprise/Advanced) ---
+    nginx.ingress.kubernetes.io/proxy-cache: "on"
+    nginx.ingress.kubernetes.io/proxy-cache-valid: "200 10m"
+
+    # --- Mirroring ---
+    nginx.ingress.kubernetes.io/mirror-target: "http://echo-v2.defaults.svc.cluster.local"
+
+    # --- Advanced Rate Limiting ---
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+
+    # --- Security ---
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://trusted.com"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "X-Custom-Auth"
+    nginx.ingress.kubernetes.io/base-auth-secret: "my-basic-auth" # Basic Auth
+
+    # --- Timeouts ---
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5000"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "10000"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "10000"
+
+    # --- Headers & Body ---
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Injected-Header "FullCoverage";
+      more_set_headers "X-Response-Header: True";
+
+    # --- Advanced / Upstream ---
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "sticky-route"
+    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "50" # Expect warning/cleanup
+
+    # --- Canary (Traffic Splitting) ---
+    # Note: Canary usually requires a second ingress object.
+
+spec:
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80

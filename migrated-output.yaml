@@ -1,0 +1,146 @@
+apiVersion: configuration.konghq.com/v1
+config:
+  minute: 600
+  second: 10
+kind: KongPlugin
+metadata:
+  name: full-coverage-rate-limiting
+  namespace: defaults
+plugin: rate-limiting
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  client_id:
+  - <PLACEHOLDER_CLIENT_ID>
+  client_secret:
+  - <PLACEHOLDER_CLIENT_SECRET>
+  issuer: https://<PLACEHOLDER_ISSUER>
+  login_redirect_mode: header
+  redirect_uri:
+  - https://coverage.example.com/
+  scopes:
+  - openid
+  - profile
+  - email
+kind: KongPlugin
+metadata:
+  annotations:
+    note: Requires Kong Enterprise License
+  name: full-coverage-oidc
+  namespace: defaults
+plugin: openid-connect
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  headers:
+  - X-Custom-Auth
+  methods:
+  - GET
+  - POST
+  - OPTIONS
+  origins:
+  - https://trusted.com
+kind: KongPlugin
+metadata:
+  name: full-coverage-cors
+  namespace: defaults
+plugin: cors
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  allowed_payload_size: 10
+  size_unit: megabytes
+kind: KongPlugin
+metadata:
+  name: full-coverage-request-size-limiting
+  namespace: defaults
+plugin: request-size-limiting
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  add:
+    headers:
+    - X-Injected-Header:FullCoverage
+kind: KongPlugin
+metadata:
+  name: full-coverage-request-transformer-headers
+  namespace: defaults
+plugin: request-transformer
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  add:
+    headers:
+    - X-Response-Header:True
+kind: KongPlugin
+metadata:
+  name: full-coverage-response-transformer-headers
+  namespace: defaults
+plugin: response-transformer
+---
+apiVersion: configuration.konghq.com/v1
+config:
+  cache_ttl: 300
+  content_type:
+  - text/plain
+  - application/json
+  request_method:
+  - GET
+  - HEAD
+  response_code:
+  - 200
+  - 301
+  - 404
+  strategy: memory
+kind: KongPlugin
+metadata:
+  name: full-coverage-proxy-cache
+  namespace: defaults
+plugin: proxy-cache
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: full-coverage-upstream-affinity
+  namespace: defaults
+spec:
+  algorithm: consistent-hashing
+  hashOn:
+    cookie: sticky-route
+    cookiePath: /
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    konghq.com/connect-timeout: "5000000"
+    konghq.com/plugins: full-coverage-rate-limiting, full-coverage-oidc, full-coverage-cors,
+      full-coverage-request-size-limiting, full-coverage-request-transformer-headers,
+      full-coverage-response-transformer-headers, full-coverage-proxy-cache
+    konghq.com/read-timeout: "10000000"
+    konghq.com/write-timeout: "10000000"
+    nginx.ingress.kubernetes.io/auth-method: GET
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-User, X-Auth-Token
+    nginx.ingress.kubernetes.io/base-auth-secret: my-basic-auth
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Injected-Header "FullCoverage";
+      more_set_headers "X-Response-Header: True";
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: "true"
+  name: full-coverage
+  namespace: defaults
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+        path: /api
+        pathType: Prefix
+status:
+  loadBalancer: {}
+---
