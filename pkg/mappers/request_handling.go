@@ -89,3 +89,23 @@ func mapBodySize(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin) {
 	addPluginReference(ing, pluginName)
 	removeAnnotation(ing, key)
 }
+
+// MapClientMaxBodySize handles nginx.ingress.kubernetes.io/client-max-body-size
+// This is an alias for proxy-body-size - both set request size limits
+// Kong: request-size-limiting plugin
+func MapClientMaxBodySize(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin) {
+	key := "nginx.ingress.kubernetes.io/client-max-body-size"
+
+	if val, ok := ing.Annotations[key]; ok {
+		// Use the existing proxy-body-size logic
+		// Temporarily set proxy-body-size annotation
+		proxyKey := "nginx.ingress.kubernetes.io/proxy-body-size"
+		ing.Annotations[proxyKey] = val
+
+		// Call existing mapper (mapBodySize)
+		mapBodySize(ing, plugins)
+
+		// Clean up client-max-body-size annotation
+		removeAnnotation(ing, key)
+	}
+}

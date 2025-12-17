@@ -1,6 +1,8 @@
 package mappers
 
 import (
+	"log"
+
 	networkingv1 "k8s.io/api/networking/v1"
 )
 
@@ -61,4 +63,45 @@ func mapSSLRedirect(ing *networkingv1.Ingress) {
 	// Clean up both if present
 	removeAnnotation(ing, "nginx.ingress.kubernetes.io/force-ssl-redirect")
 	removeAnnotation(ing, "nginx.ingress.kubernetes.io/ssl-redirect")
+}
+
+// MapServiceUpstream handles nginx.ingress.kubernetes.io/service-upstream
+// Kong: konghq.com/service-upstream (direct 1:1 mapping)
+func MapServiceUpstream(ing *networkingv1.Ingress) {
+	const nginxKey = "nginx.ingress.kubernetes.io/service-upstream"
+	const kongKey = "konghq.com/service-upstream"
+
+	if val, ok := ing.Annotations[nginxKey]; ok {
+		addAnnotation(ing, kongKey, val)
+		removeAnnotation(ing, nginxKey)
+	}
+}
+
+// MapUseRegex handles nginx.ingress.kubernetes.io/use-regex
+// Kong: konghq.com/regex-priority (set to enable regex path matching)
+func MapUseRegex(ing *networkingv1.Ingress) {
+	const nginxKey = "nginx.ingress.kubernetes.io/use-regex"
+
+	if val, ok := ing.Annotations[nginxKey]; ok {
+		if val == "true" {
+			// Enable regex path matching in Kong
+			addAnnotation(ing, "konghq.com/regex-priority", "100")
+		}
+		removeAnnotation(ing, nginxKey)
+	}
+}
+
+// MapPriority handles nginx.ingress.kubernetes.io/priority
+// Kong: konghq.com/regex-priority (controls route matching order)
+func MapPriority(ing *networkingv1.Ingress) {
+	const nginxKey = "nginx.ingress.kubernetes.io/priority"
+	const kongKey = "konghq.com/regex-priority"
+
+	if val, ok := ing.Annotations[nginxKey]; ok {
+		// Map NGINX priority to Kong regex-priority
+		// Higher priority in NGINX = higher priority in Kong
+		addAnnotation(ing, kongKey, val)
+		log.Printf("INFO: Ingress %s/%s priority set to %s. Mapped to 'konghq.com/regex-priority' for route ordering.", ing.Namespace, ing.Name, val)
+		removeAnnotation(ing, nginxKey)
+	}
 }

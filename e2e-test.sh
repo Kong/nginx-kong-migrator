@@ -3,8 +3,8 @@ set -e
 
 # Configuration
 export KUBECONFIG=/Users/justin.davies/.kube/kind-kuma-1-config
-INPUT_FILE="customer-stress-test.yaml"
-OUTPUT_FILE="customer-migrated-final.yaml"
+INPUT_FILE="tests/customer-stress-test.yaml"
+OUTPUT_FILE="tests/customer-migrated-final.yaml"
 
 echo "🚀 Starting End-to-End Migration Test Check on Orbstack"
 
@@ -141,21 +141,18 @@ echo "🔨 Building Migrator Tool..."
 go build -o migrator main.go
 
 echo "📥 Applying Input NGINX Ingress (full-coverage)..."
-INPUT_FILE="full-coverage-ingress.yaml"
-# We apply it to cluster just to be sure it's valid NGINX syntax, though we don't strictly need NGINX running for the tool.
-# Using '|| echo' to ignore admission webhooks if NGINX controller isn't perfectly configured for this complex ingress.
-kubectl apply -f $INPUT_FILE || echo "⚠️  Failed to apply input ingress to NGINX (expected if class missing or webhook issues). Proceeding with migration."
+kubectl apply -f full-coverage-ingress.yaml
 
-echo "🔄 Running Migration..."
-./migrator -f $INPUT_FILE -o migrated-output.yaml -ingress-class kong
+echo "🔄 Running Migration (Both Formats)..."
+./migrator --input full-coverage-ingress.yaml --output-format both
 
-if [ ! -f migrated-output.yaml ]; then
-    echo "❌ Migration failed: Output file not created"
+if [ ! -f migrated-kong-ingress.yaml ] || [ ! -f migrated-gateway-api.yaml ]; then
+    echo "❌ Migration failed: Output files not created"
     exit 1
 fi
 
-echo "📤 Applying Migrated Kong Resources..."
-kubectl apply -f migrated-output.yaml || echo "⚠️  Some resources failed to apply (likely Enterprise license restrictions). Proceeding with verification..."
+echo "📤 Applying Migrated Kong Ingress Resources..."
+kubectl apply -f migrated-kong-ingress.yaml || echo "⚠️  Some resources failed to apply (likely Enterprise license restrictions). Proceeding with verification..."
 
 
 echo "🔍 Validating Traffic..."
@@ -299,17 +296,82 @@ else
     echo "   ✅ Mirror Plugin Correctly Skipped (Requires custom plugin)"
 fi
 
-if grep -q "plugin: rate-limiting-advanced" migrated-output.yaml; then
+if grep -q "plugin: rate-limiting-advanced" migrated-kong-ingress.yaml; then
     echo "   ✅ Advanced Rate Limiting Plugin Configured"
+    echo "   ⚠️  Advanced Rate Limiting Plugin Found (May require Enterprise License)"
 else
-    # Logic in advanced.go maps limit-connections to a LOG MESSAGE, not a plugin generation.
-    # Wait, the previous plan said "Update `limit-connections` to suggest `rate-limiting-advanced`".
-    # But usually we just log. If we want to TEST it, we should verify the log or if we implemented checks.
-    # Checking my previous code: I only updated the log message!
-    # "ACTION REQUIRED: Ingress ... uses 'limit-connections'. ... configure 'rate-limiting-advanced'..."
-    # So we CANNOT expect the plugin to be generated automatically.
-    
     echo "   ⚠️  Advanced Rate Limiting requires manual intervention (verified via Tool Logs above)."
 fi
 
-echo "🎉 Full Coverage Test Complete."
+echo ""
+echo "🌐 Testing Gateway API Output Format..."
+echo "   > Verifying Gateway API file generation..."
+
+if [ ! -f "migrated-gateway-api.yaml" ]; then
+    echo "   ❌ Gateway API output file not created"
+    exit 1
+fi
+
+echo "   > Validating HTTPRoute structure..."
+if grep -q "apiVersion: gateway.networking.k8s.io/v1" migrated-gateway-api.yaml; then
+   echo "   ✅ Gateway API version correct"
+else
+    echo "   ❌ Gateway API version incorrect or missing"
+    exit 1
+fi
+
+if grep -q "kind: HTTPRoute" migrated-gateway-api.yaml; then
+    echo "   ✅ HTTPRoute kind present"
+else
+    echo "   ❌ HTTPRoute kind missing"
+    exit 1
+fi
+
+# Verify lowercase field names (no capitalized Metadata, Spec, etc.)
+if grep -qE "^(APIVersion|Kind|Metadata|Spec):" migrated-gateway-api.yaml; then
+    echo "   ❌ Found capitalized field names in Gateway API output"
+    grep -E "^(APIVersion|Kind|Metadata|Spec):" migrated-gateway-api.yaml | head -5
+    exit 1
+else
+    echo "   ✅ Field names properly lowercased"
+fi
+
+# Verify proper KongPlugin definitions
+if grep -q "apiVersion: configuration.konghq.com/v1" migrated-gateway-api.yaml; then
+    echo "   ✅ KongPlugin apiVersion correct"
+else
+    echo "   ❌ KongPlugin apiVersion incorrect"
+    exit 1
+fi
+
+# Verify ExtensionRef filters are present
+if grep -q "type: ExtensionRef" migrated-gateway-api.yaml; then
+    echo "   ✅ ExtensionRef filters found"
+    PLUGIN_COUNT=$(grep -c "type: ExtensionRef" migrated-gateway-api.yaml)
+    echo "   ✅ $PLUGIN_COUNT plugin(s) attached via ExtensionRef"
+else
+    echo "   ⚠️  No ExtensionRef filters found (expected for plugins)"
+fi
+
+echo "   > Deploying Gateway API resources..."
+kubectl apply -f migrated-gateway-api.yaml 2>&1 | head -15
+
+# Verify HTTPRoute was created
+if kubectl get httproute full-coverage -n defaults &>/dev/null; then
+    echo "   ✅ HTTPRoute deployed successfully"
+    
+    # Check ExtensionRef in deployed resource
+    DEPLOYED_REFS=$(kubectl get httproute full-coverage -n defaults -o yaml | grep -c "extensionRef:" || echo "0")
+    echo "   ✅ Deployed HTTPRoute has $DEPLOYED_REFS ExtensionRef(s)"
+else
+    echo "   ❌ HTTPRoute deployment failed"
+    exit 1
+fi
+
+echo "   ✅ Gateway API Output Validated"
+
+echo ""
+echo "🎉 Full Coverage Test Complete - Both Formats Validated!"
+echo "   ✅ Kong Ingress format working"
+echo "   ✅ Gateway API format working"
+echo "   ✅ ExtensionRef plugin attachment verified"

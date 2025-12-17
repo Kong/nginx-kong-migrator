@@ -11,10 +11,23 @@ import (
 )
 
 func main() {
-	inputFile := flag.String("f", "", "Input file containing NGINX Ingress manifests")
-	outputFile := flag.String("o", "migrated-ingress.yaml", "Output file for Kong manifests")
+	var (
+		inputFile    = flag.String("input", "", "Path to NGINX Ingress YAML file")
+		outputFile   = flag.String("output", "", "Path to output Kong YAML file (default: stdout)")
+		outputFormat = flag.String("output-format", "kong-ingress", "Output format: kong-ingress, gateway-api, or both")
+	)
 	ingressClass := flag.String("ingress-class", "", "Target Ingress Class Name (e.g. kong)")
 	flag.Parse()
+
+	// Validate output format
+	validFormats := map[string]bool{
+		"kong-ingress": true,
+		"gateway-api":  true,
+		"both":         true,
+	}
+	if !validFormats[*outputFormat] {
+		log.Fatalf("Invalid output format: %s. Must be kong-ingress, gateway-api, or both", *outputFormat)
+	}
 
 	if *inputFile == "" {
 		log.Fatal("Input file is required (-f)")
@@ -50,15 +63,46 @@ func main() {
 		allKongUpstreamPolicies = append(allKongUpstreamPolicies, currentUpstreamPolicies...)
 	}
 
-	// 4. Write Output
-	// Signature: func WriteOutput(ingress *networkingv1.Ingress, plugins []KongPlugin, kongIngresses []KongIngress, upstreamPolicies []KongUpstreamPolicy, filename string) error
-	// CAUTION: Generator expects single ingress pointer but we have a slice.
-	// We need to update generator to accept slice or loop here.
-
-	// Let's update generator.go to accept slice of Ingresses.
-	if err := generator.WriteOutput(ingresses, allKongPlugins, allKongIngresses, allKongUpstreamPolicies, *outputFile); err != nil {
-		log.Fatalf("Error writing output: %v", err)
+	// 4. Write Output based on format
+	outputFilename := *outputFile
+	if outputFilename == "" {
+		outputFilename = "migrated-output.yaml"
 	}
 
-	fmt.Printf("Migration complete. Output written to %s\n", *outputFile)
+	switch *outputFormat {
+	case "kong-ingress":
+		if err := generator.WriteOutput(ingresses, allKongPlugins, allKongIngresses, allKongUpstreamPolicies, outputFilename); err != nil {
+			log.Fatalf("Error writing output: %v", err)
+		}
+		fmt.Printf("Migration complete. Output written to %s\n", outputFilename)
+
+	case "gateway-api":
+		// Use default gateway name/namespace
+		gatewayName := "kong"
+		gatewayNamespace := "kong-system"
+
+		if err := generator.WriteGatewayAPIOutput(ingresses, allKongPlugins, outputFilename, gatewayName, gatewayNamespace); err != nil {
+			log.Fatalf("Error writing Gateway API output: %v", err)
+		}
+		fmt.Printf("Migration complete. Gateway API output written to %s\n", outputFilename)
+
+	case "both":
+		// Write Kong Ingress format
+		kongFile := "migrated-kong-ingress.yaml"
+		if err := generator.WriteOutput(ingresses, allKongPlugins, allKongIngresses, allKongUpstreamPolicies, kongFile); err != nil {
+			log.Fatalf("Error writing Kong Ingress output: %v", err)
+		}
+
+		// Write Gateway API format
+		gatewayFile := "migrated-gateway-api.yaml"
+		gatewayName := "kong"
+		gatewayNamespace := "kong-system"
+
+		if err := generator.WriteGatewayAPIOutput(ingresses, allKongPlugins, gatewayFile, gatewayName, gatewayNamespace); err != nil {
+			log.Fatalf("Error writing Gateway API output: %v", err)
+		}
+		fmt.Printf("Migration complete.\n")
+		fmt.Printf("  Kong Ingress: %s\n", kongFile)
+		fmt.Printf("  Gateway API: %s\n", gatewayFile)
+	}
 }

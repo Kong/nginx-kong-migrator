@@ -1,6 +1,8 @@
 package mappers
 
 import (
+	"log"
+	"strconv"
 	"strings"
 
 	"nginx-kong-migrator/pkg/generator"
@@ -48,54 +50,123 @@ func mapIPRestriction(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin
 
 func mapCORS(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin) {
 	enableKey := "nginx.ingress.kubernetes.io/enable-cors"
-	if val, ok := ing.Annotations[enableKey]; !ok || val != "true" {
+	originsKey := "nginx.ingress.kubernetes.io/cors-allow-origin"
+	methodsKey := "nginx.ingress.kubernetes.io/cors-allow-methods"
+	headersKey := "nginx.ingress.kubernetes.io/cors-allow-headers"
+	credentialsKey := "nginx.ingress.kubernetes.io/cors-allow-credentials"
+	maxAgeKey := "nginx.ingress.kubernetes.io/cors-max-age"
+	exposeHeadersKey := "nginx.ingress.kubernetes.io/cors-expose-headers"
+	preflightContinueKey := "nginx.ingress.kubernetes.io/cors-preflight-continue"
+
+	enabled, hasEnable := ing.Annotations[enableKey]
+
+	if !hasEnable || strings.ToLower(enabled) != "true" {
+		// Clean up all CORS-related annotations
+		removeAnnotation(ing, originsKey)
+		removeAnnotation(ing, methodsKey)
+		removeAnnotation(ing, headersKey)
+		removeAnnotation(ing, credentialsKey)
+		removeAnnotation(ing, maxAgeKey)
+		removeAnnotation(ing, exposeHeadersKey)
+		removeAnnotation(ing, preflightContinueKey)
 		return
 	}
 
-	config := make(map[string]interface{})
+	pluginName := generateName(ing.Name, "cors")
 
-	// Map CORS sub-annotations
-	// Origin
-	if val, ok := ing.Annotations["nginx.ingress.kubernetes.io/cors-allow-origin"]; ok {
-		// NGINX allows single string or regex. Kong expects list.
-		// If specific origin, put in list. Use '*' handling carefully.
-		if val == "*" {
-			// Kong defaults typically handle * or we leave it empty/default depending on version users want
-			// logic: Kong 'origins' can be set to ['*']
-		}
-		config["origins"] = []string{val}
-		removeAnnotation(ing, "nginx.ingress.kubernetes.io/cors-allow-origin")
+	config := map[string]interface{}{
+		"origins": []string{"*"}, // Default: allow all
 	}
 
-	// Methods
-	if val, ok := ing.Annotations["nginx.ingress.kubernetes.io/cors-allow-methods"]; ok {
-		methods := strings.Split(val, ",")
-		for i := range methods {
-			methods[i] = strings.TrimSpace(methods[i])
+	// Parse allowed origins
+	if origins, ok := ing.Annotations[originsKey]; ok {
+		originList := strings.Split(origins, ",")
+		var parsedOrigins []string
+		for _, o := range originList {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				parsedOrigins = append(parsedOrigins, o)
+			}
 		}
-		config["methods"] = methods
-		removeAnnotation(ing, "nginx.ingress.kubernetes.io/cors-allow-methods")
+		if len(parsedOrigins) > 0 {
+			config["origins"] = parsedOrigins
+		}
+		removeAnnotation(ing, originsKey)
 	}
 
-	// Headers
-	if val, ok := ing.Annotations["nginx.ingress.kubernetes.io/cors-allow-headers"]; ok {
-		headers := strings.Split(val, ",")
-		for i := range headers {
-			headers[i] = strings.TrimSpace(headers[i])
+	// Parse allowed methods
+	if methods, ok := ing.Annotations[methodsKey]; ok {
+		methodList := strings.Split(methods, ",")
+		var parsedMethods []string
+		for _, m := range methodList {
+			m = strings.TrimSpace(strings.ToUpper(m))
+			if m != "" {
+				parsedMethods = append(parsedMethods, m)
+			}
 		}
-		config["headers"] = headers
-		removeAnnotation(ing, "nginx.ingress.kubernetes.io/cors-allow-headers")
+		if len(parsedMethods) > 0 {
+			config["methods"] = parsedMethods
+		}
+		removeAnnotation(ing, methodsKey)
 	}
 
-	// Credentials
-	if val, ok := ing.Annotations["nginx.ingress.kubernetes.io/cors-allow-credentials"]; ok {
-		if val == "true" {
+	// Parse allowed headers
+	if headers, ok := ing.Annotations[headersKey]; ok {
+		headerList := strings.Split(headers, ",")
+		var parsedHeaders []string
+		for _, h := range headerList {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				parsedHeaders = append(parsedHeaders, h)
+			}
+		}
+		if len(parsedHeaders) > 0 {
+			config["headers"] = parsedHeaders
+		}
+		removeAnnotation(ing, headersKey)
+	}
+
+	// Parse exposed headers (NEW - enhancement)
+	if exposeHeaders, ok := ing.Annotations[exposeHeadersKey]; ok {
+		exposeList := strings.Split(exposeHeaders, ",")
+		var parsedExposeHeaders []string
+		for _, h := range exposeList {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				parsedExposeHeaders = append(parsedExposeHeaders, h)
+			}
+		}
+		if len(parsedExposeHeaders) > 0 {
+			config["exposed_headers"] = parsedExposeHeaders
+		}
+		removeAnnotation(ing, exposeHeadersKey)
+	}
+
+	// Parse credentials
+	if creds, ok := ing.Annotations[credentialsKey]; ok {
+		if strings.ToLower(creds) == "true" {
 			config["credentials"] = true
 		}
-		removeAnnotation(ing, "nginx.ingress.kubernetes.io/cors-allow-credentials")
+		removeAnnotation(ing, credentialsKey)
 	}
 
-	pluginName := generateName(ing.Name, "cors")
+	// Parse max age
+	if maxAge, ok := ing.Annotations[maxAgeKey]; ok {
+		if age, err := strconv.Atoi(maxAge); err == nil && age > 0 {
+			config["max_age"] = age
+		}
+		removeAnnotation(ing, maxAgeKey)
+	}
+
+	// Parse preflight continue (NEW - enhancement)
+	if preflightContinue, ok := ing.Annotations[preflightContinueKey]; ok {
+		if strings.ToLower(preflightContinue) == "true" {
+			config["preflight_continue"] = true
+			log.Printf("INFO: Ingress %s/%s will proxy OPTIONS preflight requests to upstream", ing.Namespace, ing.Name)
+		}
+		removeAnnotation(ing, preflightContinueKey)
+	}
+
 	plugin := generator.KongPlugin{
 		Metadata: generator.ObjectMeta{
 			Name:      pluginName,
@@ -107,5 +178,6 @@ func mapCORS(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin) {
 
 	*plugins = append(*plugins, plugin)
 	addPluginReference(ing, pluginName)
+
 	removeAnnotation(ing, enableKey)
 }

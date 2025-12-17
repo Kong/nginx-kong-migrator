@@ -20,6 +20,9 @@ func Apply(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin, kongIngre
 	mapRewrite(ing)
 	mapProtocol(ing)
 	mapSSLRedirect(ing)
+	MapServiceUpstream(ing)
+	MapUseRegex(ing)
+	MapPriority(ing)
 
 	// Traffic Mappings
 	mapRateLimit(ing, plugins)
@@ -28,6 +31,21 @@ func Apply(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin, kongIngre
 	mapTimeouts(ing, plugins)
 	mapCanary(ing, plugins)
 	mapRequestHandling(ing, plugins)
+	MapClientMaxBodySize(ing, plugins)
+
+	// Security: mTLS client certificate authentication
+	MapMTLS(ing, plugins)
+
+	// Request Termination: Maintenance mode and custom error pages
+	MapMaintenanceMode(ing, plugins)
+	MapDefaultBackendResponse(ing, plugins)
+
+	// Redirects: Permanent and temporal redirects
+	MapPermanentRedirect(ing, plugins)
+	MapTemporalRedirect(ing, plugins)
+
+	// Bot Detection: User-Agent filtering
+	MapBotDetection(ing, plugins)
 
 	// Apply other mappings...
 	// Note: We are now passing explicit pointers to everything.
@@ -46,6 +64,17 @@ func Apply(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin, kongIngre
 
 	// Batch 10: Caching
 	mapCaching(ing, plugins)
+
+	// Phase 4: Keepalive warnings
+	MapUpstreamKeepaliveTimeout(ing)
+	MapUpstreamKeepaliveRequests(ing)
+
+	// Phase 5: Unsupported annotations (warnings)
+	WarnBufferSettings(ing)
+	WarnSnippets(ing)
+	WarnDefaultBackend(ing)
+	WarnHTTP2PushPreload(ing)
+	WarnProxyHTTPVersion(ing)
 }
 
 // removeAnnotation removes an annotation from the Ingress
