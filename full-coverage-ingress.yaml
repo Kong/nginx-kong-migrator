@@ -1,70 +1,268 @@
+# 1. Base Ingress (Connectivity & Headers)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: full-coverage
+  name: test-headers
   namespace: defaults
   annotations:
-    # --- Routing & Redirects ---
-    # Simplified for basic mapper validation
-    # nginx.ingress.kubernetes.io/rewrite-target: "/echo"  # Causes KIC error in default Env
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    # nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" # Backend is HTTP echo server
-    nginx.ingress.kubernetes.io/preserve-trailing-slash: "true"
-
-    # --- Traffic Limits ---
-    nginx.ingress.kubernetes.io/limit-rps: "10"
-    nginx.ingress.kubernetes.io/limit-rpm: "600"
-    # nginx.ingress.kubernetes.io/limit-connections: "20" # Expect warning
-
-    # --- Auth ---
-    nginx.ingress.kubernetes.io/auth-signin: "https://login.example.com/oauth2/start?rd=$escaped_request_uri"
-    # nginx.ingress.kubernetes.io/auth-url: "http://auth-service.defaults.svc.cluster.local/auth" # Conflict with OIDC in this tool's logic (one wins)
-    nginx.ingress.kubernetes.io/auth-method: "GET"
-    nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-User, X-Auth-Token"
-    
-    # --- Caching (Enterprise/Advanced) ---
-    nginx.ingress.kubernetes.io/proxy-cache: "on"
-    nginx.ingress.kubernetes.io/proxy-cache-valid: "200 10m"
-
-    # --- Mirroring ---
-    nginx.ingress.kubernetes.io/mirror-target: "http://echo-v2.defaults.svc.cluster.local"
-
-    # --- Advanced Rate Limiting ---
-    nginx.ingress.kubernetes.io/limit-connections: "50"
-
-    # --- Security ---
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://trusted.com"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "X-Custom-Auth"
-    nginx.ingress.kubernetes.io/base-auth-secret: "my-basic-auth" # Basic Auth
-
-    # --- Timeouts ---
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5000"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "10000"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "10000"
-
-    # --- Headers & Body ---
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Snippet headers -> Request/Response Transformers
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header X-Injected-Header "FullCoverage";
       more_set_headers "X-Response-Header: True";
-
-    # --- Advanced / Upstream ---
-    nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/session-cookie-name: "sticky-route"
-    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "50" # Expect warning/cleanup
-
-    # --- Canary (Traffic Splitting) ---
-    # Note: Canary usually requires a second ingress object.
-
+    # Body size (request-size-limiting)
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+    # Keepalive (global warning check)
+    nginx.ingress.kubernetes.io/upstream-keepalive-connections: "50"
 spec:
+  ingressClassName: kong
   rules:
   - host: coverage.example.com
     http:
       paths:
-      - path: /api
+      - path: /api/headers
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 2. Auth - Basic
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-auth-basic
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/auth-type: "basic"
+    nginx.ingress.kubernetes.io/auth-secret: "my-basic-auth"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/auth-basic
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+# ---
+# 3. Auth - OIDC (Enterprise)
+# Commented out to avoid blocking OSS tests, or we can check logs.
+# The current e2e script enables Enterprise if license is present.
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: test-auth-oidc
+#   namespace: defaults
+#   annotations:
+#     nginx.ingress.kubernetes.io/auth-signin: "https://login.example.com/start"
+# spec:
+#   ingressClassName: kong
+#   rules:
+#   - host: coverage.example.com
+#     http:
+#       paths:
+#       - path: /api/oidc
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: echo-v1
+#             port:
+#               number: 80
+
+---
+# 4. Rate Limiting
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-rate-limit
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    nginx.ingress.kubernetes.io/limit-by: "ip"
+    nginx.ingress.kubernetes.io/limit-error-code: "429"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/rate-limit
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 5. Redirects
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-redirects
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/permanent-redirect: "https://google.com"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/perm-redirect
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 6. Maintenance Mode
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-maintenance
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/maintenance-mode: "true"
+    nginx.ingress.kubernetes.io/maintenance-status-code: "503"
+    nginx.ingress.kubernetes.io/maintenance-message: "Under Construction"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/maintenance
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 7. Mirroring (Custom Plugin Check)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-mirror
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/mirror-target: "http://echo-v2.defaults.svc.cluster.local"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/mirror
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 8. Caching (Enterprise)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-caching
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-cache: "on"
+    nginx.ingress.kubernetes.io/proxy-cache-valid: "200 10m"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/cache
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 9. Affinity (Cookie)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-affinity
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "sticky-route"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/affinity
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 10. CORS & IP Restriction
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-security
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://trusted.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/24, 192.168.1.0/24"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/security
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-v1
+            port:
+              number: 80
+
+---
+# 11. Bot Detection
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-bot
+  namespace: defaults
+  annotations:
+    nginx.ingress.kubernetes.io/bot-detection-deny: "curl/.*, wget/.*"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: coverage.example.com
+    http:
+      paths:
+      - path: /api/bot
         pathType: Prefix
         backend:
           service:
