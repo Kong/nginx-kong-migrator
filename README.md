@@ -239,6 +239,31 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser. The da
 
 To restrict the dashboard to a single namespace, edit the Deployment and add `--namespace <your-namespace>` to the `args` list.
 
+### Run locally with Docker (out-of-cluster)
+
+You can run the dashboard as a Docker container outside the cluster by mounting your kubeconfig:
+
+```bash
+docker run --rm \
+  -p 8080:8080 \
+  -e KUBECONFIG=/kubeconfig \
+  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
+  kong/nginx-kong-migrator:latest ui
+```
+
+Then open [http://localhost:8080](http://localhost:8080). The container reads the mounted kubeconfig to connect to whichever cluster context is currently active.
+
+To target a specific context, set it before running:
+
+```bash
+kubectl config use-context <your-context>
+docker run --rm \
+  -p 8080:8080 \
+  -e KUBECONFIG=/kubeconfig \
+  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
+  kong/nginx-kong-migrator:latest ui
+```
+
 ### Uninstall
 
 ```bash
