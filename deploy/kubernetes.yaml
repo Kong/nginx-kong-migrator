@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong-migrator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kong-migrator
+  namespace: kong-migrator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kong-migrator
+rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "create", "update"]
+  - apiGroups: ["configuration.konghq.com"]
+    resources: ["kongplugins", "kongupstreampolicies"]
+    verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kong-migrator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kong-migrator
+subjects:
+  - kind: ServiceAccount
+    name: kong-migrator
+    namespace: kong-migrator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong-migrator
+  namespace: kong-migrator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong-migrator
+  template:
+    metadata:
+      labels:
+        app: kong-migrator
+    spec:
+      serviceAccountName: kong-migrator
+      containers:
+        - name: kong-migrator
+          image: kong/nginx-kong-migrator:latest
+          imagePullPolicy: IfNotPresent
+          args: ["ui"]
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-migrator
+  namespace: kong-migrator
+spec:
+  selector:
+    app: kong-migrator
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
