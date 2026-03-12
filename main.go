@@ -4,13 +4,28 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"nginx-kong-migrator/pkg/generator"
 	"nginx-kong-migrator/pkg/mappers"
 	"nginx-kong-migrator/pkg/parser"
+	"nginx-kong-migrator/pkg/ui"
 )
 
 func main() {
+	// ui subcommand — spins up the local dashboard server
+	if len(os.Args) > 1 && os.Args[1] == "ui" {
+		uiFlags := flag.NewFlagSet("ui", flag.ExitOnError)
+		port := uiFlags.Int("port", 8080, "Port to listen on")
+		namespace := uiFlags.String("namespace", "", "Kubernetes namespace to watch (empty = all namespaces)")
+		kubeconfig := uiFlags.String("kubeconfig", "", "Path to kubeconfig file (default: $KUBECONFIG or ~/.kube/config)")
+		uiFlags.Parse(os.Args[2:])
+		if err := ui.Start(*port, *namespace, *kubeconfig); err != nil {
+			log.Fatalf("ui server error: %v", err)
+		}
+		return
+	}
+
 	var (
 		inputFile    = flag.String("input", "", "Path to NGINX Ingress YAML file")
 		outputFile   = flag.String("output", "", "Path to output Kong YAML file (default: stdout)")

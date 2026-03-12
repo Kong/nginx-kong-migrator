@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kong Migration Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --surface: #0e1420;
+      --surface-hover: #141c2d;
+      --surface-selected: #1a2640;
+      --border: #1e2a3d;
+      --border-subtle: #151f30;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --text-muted: #4a5568;
+      --accent: #22d3ee;
+      --accent-subtle: rgba(34,211,238,0.08);
+      --green: #34d399; --green-bg: rgba(16,185,129,0.10); --green-border: rgba(52,211,153,0.25);
+      --yellow: #fbbf24; --yellow-bg: rgba(245,158,11,0.10); --yellow-border: rgba(251,191,36,0.25);
+      --red: #f87171; --red-bg: rgba(239,68,68,0.10); --red-border: rgba(248,113,113,0.25);
+      --font-ui: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--bg) 0%, var(--surface) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--text-primary);
+    }
+    .header h1 .accent-word {
+      color: var(--accent);
+    }
+    .config-bar { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+    .config-bar label { display: flex; align-items: center; gap: 6px; }
+    .config-bar input {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      width: 140px;
+      background: var(--surface);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .config-bar input:focus { border-color: var(--accent); }
+    .config-bar input::placeholder { color: var(--text-muted); }
+
+    /* ── Summary bar ──────────────────────────────────────────────── */
+    .summary-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-item {
+      padding: 20px 32px;
+      border-right: 1px solid var(--border);
+      border-left: 3px solid transparent;
+      transition: background 0.15s;
+    }
+    .summary-item:last-child { border-right: none; }
+    .summary-item.green  { border-left-color: var(--green); }
+    .summary-item.yellow { border-left-color: var(--yellow); }
+    .summary-item.red    { border-left-color: var(--red); }
+    .summary-count {
+      font-family: var(--font-mono);
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .summary-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* ── Toolbar ──────────────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-primary  { background: var(--accent); color: #0a0f1a; border-color: var(--accent); }
+    .btn-primary:hover:not(:disabled)  { background: #38e8ff; border-color: #38e8ff; }
+    .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+    .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); }
+    .btn-download { background: transparent; color: #2dd4bf; border-color: #2dd4bf; }
+    .btn-download:hover { background: rgba(45,212,191,0.08); }
+    .btn-copy { background: transparent; color: #a78bfa; border-color: #a78bfa; }
+    .btn-copy:hover:not(:disabled) { background: rgba(167,139,250,0.08); }
+    .spacer { flex: 1; }
+    .filter-row { display: flex; gap: 8px; align-items: center; }
+    .filter-row input,
+    .filter-row select {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .filter-row input:focus,
+    .filter-row select:focus { border-color: var(--accent); }
+    .filter-row input::placeholder { color: var(--text-muted); }
+    .filter-row select option { background: var(--surface); }
+
+    /* ── Feedback ─────────────────────────────────────────────────── */
+    .feedback { margin: 0 24px; padding: 0; font-size: 13px; }
+    .feedback:not(:empty) { margin: 10px 24px; border-radius: 4px; padding: 9px 14px; }
+    .feedback.success { background: rgba(52,211,153,0.06); border-left: 3px solid var(--green); color: var(--green); }
+    .feedback.error   { background: rgba(248,113,113,0.06); border-left: 3px solid var(--red); color: var(--red); }
+    .feedback.info    { background: var(--accent-subtle); border-left: 3px solid var(--accent); color: var(--accent); }
+    .feedback.warning { background: rgba(251,191,36,0.06); border-left: 3px solid var(--yellow); color: var(--yellow); }
+
+    /* ── Table ────────────────────────────────────────────────────── */
+    .table-wrap { padding: 16px 24px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    thead tr { background: var(--bg); }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: middle;
+      color: var(--text-primary);
+    }
+    tr.ingress-row:hover td { background: var(--surface-hover); cursor: pointer; }
+    tr.ingress-row:hover td:first-child { border-left: 2px solid var(--accent); padding-left: 10px; }
+    tr.ingress-row.selected-row > td { background: var(--surface-selected); }
+    tr.ingress-row.selected-row > td:first-child { border-left: 2px solid var(--accent); padding-left: 10px; }
+
+    /* checkboxes */
+    input[type="checkbox"] { accent-color: var(--accent); }
+
+    /* ── Status badges ─────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      border: 1px solid transparent;
+    }
+    .badge::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    .badge.green  { background: var(--green-bg);  color: var(--green);  border-color: var(--green-border); }
+    .badge.yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
+    .badge.red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
+
+    /* ── Action chip ──────────────────────────────────────────────── */
+    .action-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid var(--yellow-border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      cursor: help;
+    }
+
+    /* ── Detail row ───────────────────────────────────────────────── */
+    tr.detail-row td { padding: 0; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .detail-content {
+      padding: 18px 24px;
+      border-top: 2px solid var(--accent);
+      animation: slideDown 0.15s ease;
+      background: var(--surface);
+    }
+    .detail-content .section { margin-bottom: 14px; }
+    .detail-content h4 {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .detail-content ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+    .detail-content ul li {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .detail-content ul li.warning-note { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-bg); }
+    .detail-content ul li.error-note   { border-color: var(--red-border);    color: var(--red);    background: var(--red-bg); }
+    .detail-content ul li code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+    /* ── Empty / loading states ───────────────────────────────────── */
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+    .empty-state strong { color: var(--text-secondary); }
+    .empty-state p { margin-top: 8px; font-size: 13px; }
+    .loading { text-align: center; padding: 32px; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="accent-word">Kong</span> Migration Dashboard</h1>
+  <div class="config-bar">
+    <label>Target ingress class: <input type="text" id="ingressClass" value="kong" placeholder="kong"></label>
+    <label>Target namespace: <input type="text" id="targetNamespace" placeholder="e.g. kong-prod"></label>
+  </div>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-item green">
+    <div class="summary-count" id="greenCount">—</div>
+    <div class="summary-label">Migrated</div>
+  </div>
+  <div class="summary-item yellow">
+    <div class="summary-count" id="yellowCount">—</div>
+    <div class="summary-label">Ready to migrate</div>
+  </div>
+  <div class="summary-item red">
+    <div class="summary-count" id="redCount">—</div>
+    <div class="summary-label">Manual action required</div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-primary" id="migrateSelectedBtn" onclick="migrateSelected()">Migrate Selected</button>
+  <button class="btn btn-copy" id="copySelectedBtn" onclick="copySelectedToNs()">Copy Selected to Namespace</button>
+  <button class="btn btn-secondary" onclick="loadIngresses()">↻ Refresh</button>
+  <div class="spacer"></div>
+  <div class="filter-row">
+    <input type="text" id="filterText" placeholder="Filter by name / namespace…" oninput="applyFilter()">
+    <select id="filterStatus" onchange="applyFilter()">
+      <option value="">All statuses</option>
+      <option value="0">Migrated</option>
+      <option value="1">Ready</option>
+      <option value="2">Manual</option>
+    </select>
+  </div>
+</div>
+
+<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+
+<div class="table-wrap">
+  <table id="mainTable">
+    <thead>
+      <tr>
+        <th style="width:32px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" title="Select all eligible"></th>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Hosts</th>
+        <th>Status</th>
+        <th>NGINX Annotations</th>
+        <th>Actions Required</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7" class="loading">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  'use strict';
+
+  let allIngresses = [];
+  let visibleIngresses = [];
+
+  // ── Data loading ──────────────────────────────────────────────────────────
+
+  async function loadIngresses() {
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
+    clearFeedback();
+    try {
+      const resp = await fetch('/api/ingresses');
+      if (!resp.ok) throw new Error(await resp.text());
+      const data = await resp.json();
+      allIngresses = data || [];
+      applyFilter();
+      updateSummary(allIngresses);
+    } catch (e) {
+      showFeedback('Failed to load ingresses: ' + e.message, 'error');
+      document.getElementById('tableBody').innerHTML =
+        '<tr><td colspan="7" class="empty-state"><strong>Error loading data</strong><p>' + escHtml(e.message) + '</p></td></tr>';
+    }
+  }
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+
+  function updateSummary(data) {
+    document.getElementById('greenCount').textContent  = data.filter(i => i.status === 0).length;
+    document.getElementById('yellowCount').textContent = data.filter(i => i.status === 1).length;
+    document.getElementById('redCount').textContent    = data.filter(i => i.status === 2).length;
+  }
+
+  // ── Filter ────────────────────────────────────────────────────────────────
+
+  function applyFilter() {
+    const text   = document.getElementById('filterText').value.toLowerCase();
+    const status = document.getElementById('filterStatus').value;
+    visibleIngresses = allIngresses.filter(ing => {
+      const matchText   = !text || ing.name.toLowerCase().includes(text) || ing.namespace.toLowerCase().includes(text);
+      const matchStatus = status === '' || String(ing.status) === status;
+      return matchText && matchStatus;
+    });
+    renderTable(visibleIngresses);
+  }
+
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  function statusClass(s) { return ['green', 'yellow', 'red'][s] ?? 'red'; }
+  function statusLabel(s) { return ['Migrated', 'Ready', 'Manual'][s] ?? 'Manual'; }
+  function statusIcon(s)  { return ''; }
+
+  function renderTable(data) {
+    const tbody = document.getElementById('tableBody');
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><strong>No ingresses found</strong><p>Try adjusting the filter or check your kubeconfig.</p></td></tr>';
+      document.getElementById('selectAll').indeterminate = false;
+      document.getElementById('selectAll').checked = false;
+      return;
+    }
+
+    const rows = data.map(ing => {
+      const eligible = ing.status === 1;
+      const sc = statusClass(ing.status);
+      const hosts = (ing.hosts && ing.hosts.length) ? escHtml(ing.hosts.join(', ')) : '<span style="color:var(--text-muted)">—</span>';
+      const checkboxAttrs = eligible
+        ? `class="row-check" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}"`
+        : `class="row-check" disabled title="Cannot migrate: unmigrated annotations remain"`;
+      return `<tr class="ingress-row" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}" onclick="handleRowClick(event, this)">
+        <td onclick="event.stopPropagation()"><input type="checkbox" ${checkboxAttrs}></td>
+        <td><strong>${escHtml(ing.name)}</strong></td>
+        <td style="color:var(--text-secondary)">${escHtml(ing.namespace)}</td>
+        <td style="font-family:var(--font-mono);font-size:12px">${hosts}</td>
+        <td><span class="badge ${sc}">${statusIcon(ing.status)}${statusLabel(ing.status)}</span></td>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${ing.annotationCount || 0}</td>
+        <td>${ing.actionNotes && ing.actionNotes.length > 0 ? '<span class="action-chip" title="Manual steps required after migration">Action needed</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = rows.join('');
+    updateSelectAll();
+  }
+
+  function handleRowClick(event, tr) {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'A') return;
+    const ns   = tr.dataset.ns;
+    const name = tr.dataset.name;
+    const ing  = allIngresses.find(i => i.namespace === ns && i.name === name);
+    if (!ing) return;
+    toggleDetail(tr, ing);
+  }
+
+  function toggleDetail(tr, ing) {
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('detail-row')) {
+      next.remove();
+      tr.classList.remove('selected-row');
+      return;
+    }
+    // Close any other open detail rows first
+    document.querySelectorAll('tr.detail-row').forEach(r => r.remove());
+    document.querySelectorAll('tr.ingress-row.selected-row').forEach(r => r.classList.remove('selected-row'));
+    tr.classList.add('selected-row');
+
+    const eligible = ing.status === 1;
+    let content = '';
+
+    if (ing.actionNotes && ing.actionNotes.length > 0) {
+      const items = ing.actionNotes.map(n => `<li class="warning-note">${escHtml(n)}</li>`).join('');
+      content += `<div class="section"><h4>Action Required Before Migration</h4><ul>${items}</ul></div>`;
+    }
+
+    if (ing.unmigratedKeys && ing.unmigratedKeys.length > 0) {
+      const items = ing.unmigratedKeys.map(k => `<li class="error-note"><code>${escHtml(k)}</code></li>`).join('');
+      content += `<div class="section"><h4>Unmigrated Annotations (no Kong equivalent)</h4><ul>${items}</ul></div>`;
+    }
+
+    if (ing.generatedPlugins && ing.generatedPlugins.length > 0) {
+      const items = ing.generatedPlugins.map(p => `<li><code>${escHtml(p)}</code></li>`).join('');
+      content += `<div class="section"><h4>Generated KongPlugins</h4><ul>${items}</ul></div>`;
+    }
+
+    const ns   = escAttr(ing.namespace);
+    const name = escAttr(ing.name);
+    content += `<div class="actions">
+      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=kong-ingress" download>↓ Kong Ingress YAML</a>
+      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=gateway-api" download>↓ Gateway API YAML</a>
+      ${eligible ? `<button class="btn btn-primary" onclick="migrateSingle('${ns}','${name}')">⬆ Migrate to Kong</button>` : `<button class="btn btn-secondary" disabled title="Cannot auto-migrate">⬆ Migrate (blocked)</button>`}
+      ${eligible ? `<button class="btn btn-copy" onclick="copyToNsSingle('${ns}','${name}')">Copy to Namespace</button>` : ''}
+    </div>`;
+
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'detail-row';
+    detailTr.innerHTML = `<td colspan="7"><div class="detail-content">${content}</div></td>`;
+    tr.insertAdjacentElement('afterend', detailTr);
+  }
+
+  // ── Select all ────────────────────────────────────────────────────────────
+
+  function toggleSelectAll(cb) {
+    document.querySelectorAll('.row-check:not(:disabled)').forEach(c => c.checked = cb.checked);
+  }
+
+  function updateSelectAll() {
+    const all     = document.querySelectorAll('.row-check:not(:disabled)');
+    const checked = document.querySelectorAll('.row-check:not(:disabled):checked');
+    const sa = document.getElementById('selectAll');
+    if (all.length === 0) {
+      sa.indeterminate = false;
+      sa.checked = false;
+    } else if (checked.length === all.length) {
+      sa.indeterminate = false;
+      sa.checked = true;
+    } else if (checked.length === 0) {
+      sa.indeterminate = false;
+      sa.checked = false;
+    } else {
+      sa.indeterminate = true;
+    }
+  }
+
+  document.addEventListener('change', e => {
+    if (e.target.classList.contains('row-check')) updateSelectAll();
+  });
+
+  // ── Migration ─────────────────────────────────────────────────────────────
+
+  function confirmMigration(ingresses) {
+    const notes = new Set();
+    for (const ref of ingresses) {
+      const ing = allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
+      if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
+    }
+    if (notes.size === 0) return true;
+    const list = [...notes].map(n => `• ${n}`).join('\n');
+    return window.confirm(
+      `The following ingress(es) require manual steps after migration:\n\n${list}\n\nProceed anyway?`
+    );
+  }
+
+  async function migrateSingle(ns, name) {
+    if (!confirmMigration([{namespace: ns, name: name}])) return;
+    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
+    showFeedback(`Migrating ${ns}/${name}…`, 'info');
+    try {
+      const resp = await fetch('/api/migrate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass})
+      });
+      const results = await resp.json();
+      const r = results[0];
+      if (r.success) {
+        showFeedback(`✓ Successfully migrated ${ns}/${name}`, 'success');
+      } else {
+        showFeedback(`✗ Migration failed for ${ns}/${name}: ${r.error}`, 'error');
+      }
+      await loadIngresses();
+    } catch (e) {
+      showFeedback('Request error: ' + e.message, 'error');
+    }
+  }
+
+  async function migrateSelected() {
+    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
+    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
+    if (checked.length === 0) {
+      showFeedback('No ingresses selected. Check one or more green/yellow rows first.', 'info');
+      return;
+    }
+    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
+    if (!confirmMigration(ingresses)) return;
+    showFeedback(`Migrating ${ingresses.length} ingress(es)…`, 'info');
+    try {
+      const resp = await fetch('/api/migrate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ingresses, ingressClass})
+      });
+      const results = await resp.json();
+      const ok   = results.filter(r => r.success);
+      const fail = results.filter(r => !r.success);
+      let msg = `✓ Migrated ${ok.length}/${results.length} ingress(es)`;
+      if (fail.length > 0) {
+        msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+        showFeedback(msg, 'warning');
+      } else {
+        showFeedback(msg, 'success');
+      }
+      await loadIngresses();
+    } catch (e) {
+      showFeedback('Request error: ' + e.message, 'error');
+    }
+  }
+
+  // ── Copy to Namespace ─────────────────────────────────────────────────────
+
+  async function copyToNsSingle(ns, name) {
+    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
+    const targetNamespace = document.getElementById('targetNamespace').value.trim();
+    if (!targetNamespace) {
+      showFeedback('Please fill in the "Target namespace" field before copying.', 'warning');
+      return;
+    }
+    if (!confirmMigration([{namespace: ns, name: name}])) return;
+    showFeedback(`Copying ${ns}/${name} to namespace "${targetNamespace}"…`, 'info');
+    try {
+      const resp = await fetch('/api/copy-to-namespace', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass, targetNamespace})
+      });
+      const results = await resp.json();
+      const r = results[0];
+      if (r.success) {
+        showFeedback(`✓ Copied ${ns}/${name} to namespace "${targetNamespace}"`, 'success');
+      } else {
+        showFeedback(`✗ Copy failed for ${ns}/${name}: ${r.error}`, 'error');
+      }
+      await loadIngresses();
+    } catch (e) {
+      showFeedback('Request error: ' + e.message, 'error');
+    }
+  }
+
+  async function copySelectedToNs() {
+    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
+    const targetNamespace = document.getElementById('targetNamespace').value.trim();
+    if (!targetNamespace) {
+      showFeedback('Please fill in the "Target namespace" field before copying.', 'warning');
+      return;
+    }
+    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
+    if (checked.length === 0) {
+      showFeedback('No ingresses selected. Check one or more Ready rows first.', 'info');
+      return;
+    }
+    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
+    if (!confirmMigration(ingresses)) return;
+    showFeedback(`Copying ${ingresses.length} ingress(es) to namespace "${targetNamespace}"…`, 'info');
+    try {
+      const resp = await fetch('/api/copy-to-namespace', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ingresses, ingressClass, targetNamespace})
+      });
+      const results = await resp.json();
+      const ok   = results.filter(r => r.success);
+      const fail = results.filter(r => !r.success);
+      let msg = `✓ Copied ${ok.length}/${results.length} ingress(es) to "${targetNamespace}"`;
+      if (fail.length > 0) {
+        msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+        showFeedback(msg, 'warning');
+      } else {
+        showFeedback(msg, 'success');
+      }
+      await loadIngresses();
+    } catch (e) {
+      showFeedback('Request error: ' + e.message, 'error');
+    }
+  }
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+
+  let feedbackTimer = null;
+  function showFeedback(msg, type) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.className = 'feedback ' + (type || '');
+    if (feedbackTimer) clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(clearFeedback, 8000);
+  }
+  function clearFeedback() {
+    const el = document.getElementById('feedback');
+    el.textContent = '';
+    el.className = 'feedback';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/"/g, '%22').replace(/'/g, '%27');
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  loadIngresses();
+</script>
+</body>
+</html>
