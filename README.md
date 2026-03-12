@@ -209,6 +209,46 @@ spec:
       weight: 20
 ```
 
+## UI Dashboard
+
+The migration tool includes a web-based dashboard that connects to your cluster and lets you browse, analyse, and migrate Ingress resources interactively.
+
+### Deploy to Kubernetes
+
+The `deploy/kubernetes.yaml` manifest creates a dedicated `kong-migrator` namespace and installs all required resources (ServiceAccount, ClusterRole, ClusterRoleBinding, Deployment, Service):
+
+```bash
+kubectl apply -f deploy/kubernetes.yaml
+```
+
+Wait for the pod to become ready:
+
+```bash
+kubectl -n kong-migrator rollout status deployment/kong-migrator
+```
+
+### Access the Dashboard
+
+Port-forward the service to your local machine:
+
+```bash
+kubectl -n kong-migrator port-forward svc/kong-migrator 8080:8080
+```
+
+Then open [http://localhost:8080](http://localhost:8080) in your browser. The dashboard reads Ingress resources across all namespaces using the pod's service account — no kubeconfig or extra credentials required.
+
+To restrict the dashboard to a single namespace, edit the Deployment and add `--namespace <your-namespace>` to the `args` list.
+
+### Uninstall
+
+```bash
+kubectl delete -f deploy/kubernetes.yaml
+```
+
+This removes all resources created by the manifest, including the `kong-migrator` namespace.
+
+---
+
 ## End-to-End Testing
 
 The project includes a robust E2E test script `e2e-test.sh` that works with Orbstack, Minikube, or Kind.
