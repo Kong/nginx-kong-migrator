@@ -56,9 +56,6 @@ func Apply(ing *networkingv1.Ingress, plugins *[]generator.KongPlugin, kongIngre
 
 	// Batch 8: External Auth & Headers
 	mapExternalAuth(ing, plugins)
-	// mapSnippetHeaders is likely called inside or concurrently?
-	// The previous implementation had them separate. Let's keep them separate if not in mapAdvanced.
-	mapSnippetHeaders(ing, plugins)
 	// Batch 9: Advanced (Affinity, etc.)
 	mapAdvanced(ing, plugins, kongIngresses, upstreamPolicies)
 
