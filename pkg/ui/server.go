@@ -74,6 +74,7 @@ func Start(port int, namespace string, kubeconfig string) error {
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/api/ingresses", s.handleIngresses)
 	mux.HandleFunc("/api/ingress/", s.handleIngressDownload)
+	mux.HandleFunc("/api/ingress-raw/", s.handleIngressRaw)
 	mux.HandleFunc("/api/migrate", s.handleMigrate)
 	mux.HandleFunc("/api/copy-to-namespace", s.handleCopyToNamespace)
 
@@ -177,6 +178,32 @@ func (s *srv) handleIngressDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.Write(buf.Bytes())
+}
+
+// handleIngressRaw serves: GET /api/ingress-raw/{ns}/{name}
+func (s *srv) handleIngressRaw(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/ingress-raw/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+		http.NotFound(w, r)
+		return
+	}
+	ns, name := parts[0], parts[1]
+
+	ing, err := s.client.NetworkingV1().Ingresses(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data, err := yaml.Marshal(ing)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Write(data)
 }
 
 type migrateRequest struct {
