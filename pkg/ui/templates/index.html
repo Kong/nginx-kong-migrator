@@ -6,685 +6,700 @@
   <title>Kong Migration Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- 1. Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 2. Tailwind config — after CDN, before Alpine -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sidebar-bg': '#080f1f',
+            'sidebar-border': '#131e32',
+            'sidebar-text': '#6b82a0',
+            'sidebar-text-hover': '#c8d5e8',
+            'sidebar-active-bg': 'rgba(20,102,255,0.10)',
+            'sidebar-section': '#2e4060',
+            'accent': '#1466ff',
+            'accent-hover': '#0f54d6',
+            'accent-subtle': 'rgba(20,102,255,0.08)',
+            'kong-teal': '#00c2a8',
+            'status-green': '#027a55',
+            'status-green-bg': '#ecfdf5',
+            'status-green-border': '#a6f4c5',
+            'status-yellow': '#b54708',
+            'status-yellow-bg': '#fffaeb',
+            'status-yellow-border': '#fedf89',
+            'status-red': '#b42318',
+            'status-red-bg': '#fef3f2',
+            'status-red-border': '#fecdca',
+            'text-primary': '#0f1c2e',
+            'text-secondary': '#5a7184',
+            'text-muted': '#9aafc4',
+            'border-ui': '#e3e8ef',
+            'border-subtle': '#f0f3f7',
+            'copy-purple': '#6941c6',
+          },
+          fontFamily: {
+            'ui': ['"Plus Jakarta Sans"', 'sans-serif'],
+            'mono': ['"JetBrains Mono"', 'monospace'],
+          },
+          keyframes: {
+            fadeIn:       { from: { opacity: '0', transform: 'translateY(4px)' },          to: { opacity: '1', transform: 'translateY(0)' } },
+            slideDown:    { from: { opacity: '0', transform: 'translateY(-4px)' },         to: { opacity: '1', transform: 'translateY(0)' } },
+            modalIn:      { from: { opacity: '0', transform: 'translateY(-10px) scale(0.97)' }, to: { opacity: '1', transform: 'translateY(0) scale(1)' } },
+            pulseOpacity: { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.45' } },
+          },
+          animation: {
+            'fade-in':      'fadeIn 0.2s ease',
+            'slide-down':   'slideDown 0.15s ease',
+            'modal-in':     'modalIn 0.2s ease both',
+            'pulse-opacity':'pulseOpacity 1.6s ease-in-out infinite',
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 3. Alpine.js v3 — defer -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
   <style>
-    :root {
-      --bg: #eef1f7;
-      --surface: #ffffff;
-      --surface-hover: #f4f7fd;
-      --surface-selected: #e6efff;
-      --border: #d4dce8;
-      --border-subtle: #e8edf5;
-      --text-primary: #0d1b2e;
-      --text-secondary: #3d5478;
-      --text-muted: #7a93b8;
-      --accent: #1a5ce8;
-      --accent-hover: #1248cc;
-      --accent-subtle: rgba(26,92,232,0.09);
-      --green: #0a6e4e; --green-bg: #ecfdf5; --green-border: #6ee7b7;
-      --yellow: #92480a; --yellow-bg: #fffbeb; --yellow-border: #fcd34d;
-      --red: #b91c1c;   --red-bg: #fef2f2;   --red-border: #fca5a5;
-      --font-ui: 'Syne', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-
-    body {
-      font-family: var(--font-ui);
-      background: var(--bg);
-      color: var(--text-primary);
-      font-size: 14px;
-      animation: fadeIn 0.2s ease;
-    }
-
-    /* ── Header ────────────────────────────────────────────────────── */
-    .header {
-      background: var(--surface);
-      border-bottom: 3px solid var(--accent);
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      box-shadow: 0 1px 4px rgba(13,27,46,0.06);
-    }
-    .header h1 {
-      font-size: 19px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
-      color: var(--text-primary);
-    }
-    .header h1 .accent-word {
-      color: var(--accent);
-    }
-
-    /* ── Shared input style ───────────────────────────────────────── */
-    .input-white {
-      padding: 5px 10px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: var(--font-mono);
-      background: var(--surface);
-      color: var(--text-primary);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .input-white:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
-    .input-white::placeholder { color: var(--text-muted); }
-
-    /* ── Toolbar config group ─────────────────────────────────────── */
-    .toolbar-config { display: flex; align-items: center; gap: 10px; }
-    .toolbar-config label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
-    .toolbar-config .input-white { width: 130px; }
-    .toolbar-divider { width: 1px; height: 26px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
-
-    /* ── Summary bar ──────────────────────────────────────────────── */
-    .summary-bar {
-      display: flex;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 1px 3px rgba(13,27,46,0.05);
-    }
-    .summary-item {
-      padding: 18px 32px;
-      border-right: 1px solid var(--border);
-      border-left: 3px solid transparent;
-    }
-    .summary-item:last-child { border-right: none; }
-    .summary-item.green  { border-left-color: var(--green); }
-    .summary-item.yellow { border-left-color: var(--yellow); }
-    .summary-item.red    { border-left-color: var(--red); }
-    .summary-count {
-      font-family: var(--font-mono);
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .summary-item.green  .summary-count { color: var(--green); }
-    .summary-item.yellow .summary-count { color: var(--yellow); }
-    .summary-item.red    .summary-count { color: var(--red); }
-    .summary-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-      color: var(--text-muted);
-      margin-top: 5px;
-    }
-
-    /* ── Toolbar ──────────────────────────────────────────────────── */
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 24px;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 7px 15px;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      font-family: var(--font-ui);
-      font-weight: 600;
-      text-decoration: none;
-      transition: background 0.12s, box-shadow 0.12s, transform 0.1s;
-    }
-    .btn:active:not(:disabled) { transform: translateY(1px); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary  { background: var(--accent); color: #ffffff; border-color: var(--accent); box-shadow: 0 1px 3px rgba(26,92,232,0.25); }
-    .btn-primary:hover:not(:disabled)  { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: 0 2px 6px rgba(26,92,232,0.35); }
-    .btn-secondary { background: var(--surface); color: var(--text-secondary); border-color: var(--border); }
-    .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); border-color: #b8c4d8; }
-    .btn-download { background: #0e7490; color: #ffffff; border-color: #0e7490; }
-    .btn-download:hover { background: #0a5f77; border-color: #0a5f77; }
-    .btn-copy { background: #6d28d9; color: #ffffff; border-color: #6d28d9; }
-    .btn-copy:hover:not(:disabled) { background: #5b21b6; border-color: #5b21b6; }
-    .spacer { flex: 1; }
-    .filter-row { display: flex; gap: 8px; align-items: center; }
-    .filter-row input,
-    .filter-row select {
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: var(--font-ui);
-      background: var(--surface);
-      color: var(--text-primary);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .filter-row input:focus,
-    .filter-row select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
-    .filter-row input::placeholder { color: var(--text-muted); }
-    .filter-row select option { background: var(--surface); color: var(--text-primary); }
-
-    /* ── Feedback ─────────────────────────────────────────────────── */
-    .feedback { margin: 0 24px; padding: 0; font-size: 13px; font-weight: 500; }
-    .feedback:not(:empty) { margin: 10px 24px; border-radius: 4px; padding: 9px 14px; }
-    .feedback.success { background: var(--green-bg);  border-left: 3px solid var(--green);  color: var(--green); }
-    .feedback.error   { background: var(--red-bg);    border-left: 3px solid var(--red);    color: var(--red); }
-    .feedback.info    { background: var(--accent-subtle); border-left: 3px solid var(--accent); color: var(--accent); }
-    .feedback.warning { background: var(--yellow-bg); border-left: 3px solid var(--yellow); color: var(--yellow); }
-
-    /* ── Table ────────────────────────────────────────────────────── */
-    .table-wrap { padding: 16px 24px; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 2px 12px rgba(13,27,46,0.07);
-    }
-    thead tr { background: var(--bg); }
-    th {
-      text-align: left;
-      padding: 10px 12px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-    }
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--border-subtle);
-      vertical-align: middle;
-      color: var(--text-primary);
-    }
-    tr.ingress-row:hover td { background: var(--surface-hover); cursor: pointer; }
-    tr.ingress-row:hover td:first-child { border-left: 3px solid var(--accent); padding-left: 9px; }
-    tr.ingress-row.selected-row > td { background: var(--surface-selected); }
-    tr.ingress-row.selected-row > td:first-child { border-left: 3px solid var(--accent); padding-left: 9px; }
-
-    /* checkboxes */
-    input[type="checkbox"] { accent-color: var(--accent); }
-
-    /* ── Status badges ─────────────────────────────────────────────── */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 9px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      border: 1px solid transparent;
-    }
-    .badge::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-      margin-right: 6px;
-      flex-shrink: 0;
-    }
-    .badge.green  { background: var(--green-bg);  color: var(--green);  border-color: var(--green-border); }
-    .badge.yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
-    .badge.red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
-
-    /* ── Action chip ──────────────────────────────────────────────── */
-    .action-chip {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--yellow-bg);
-      color: var(--yellow);
-      border: 1px solid var(--yellow-border);
-      border-radius: 4px;
-      padding: 2px 7px;
-      cursor: help;
-    }
-
-    /* ── Detail row ───────────────────────────────────────────────── */
-    tr.detail-row td { padding: 0; background: var(--bg); border-bottom: 1px solid var(--border); }
-    .detail-content {
-      padding: 18px 24px;
-      border-top: 3px solid var(--accent);
-      animation: slideDown 0.15s ease;
-      background: var(--surface);
-    }
-    .detail-content .section { margin-bottom: 14px; }
-    .detail-content h4 {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-    .detail-content ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
-    .detail-content ul li {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 3px 8px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    .detail-content ul li.warning-note { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-bg); }
-    .detail-content ul li.error-note   { border-color: var(--red-border);    color: var(--red);    background: var(--red-bg); }
-    .detail-content ul li code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-
-    /* ── Empty / loading states ───────────────────────────────────── */
-    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
-    .empty-state strong { color: var(--text-secondary); }
-    .empty-state p { margin-top: 8px; font-size: 13px; }
-    .loading { text-align: center; padding: 32px; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
+    [x-cloak] { display: none !important; }
+    /* Table row hover — complex :hover td selectors Tailwind CDN can't express */
+    .ing-tbody > tr:first-child > td { cursor: pointer; }
+    .ing-tbody:hover > tr:first-child > td { background: #f7f9fc; }
+    .ing-tbody:hover > tr:first-child > td:first-child { border-left: 2px solid #1466ff; padding-left: 12px; }
+    .ing-tbody.is-expanded > tr:first-child > td { background: rgba(20,102,255,0.04); }
+    .ing-tbody.is-expanded > tr:first-child > td:first-child { border-left: 2px solid #1466ff; padding-left: 12px; }
+    input[type="checkbox"] { accent-color: #1466ff; }
   </style>
 </head>
-<body>
 
-<div class="header">
-  <h1><span class="accent-word">Kong</span> Migration Dashboard</h1>
-</div>
+<body class="font-ui bg-[#f5f7fa] text-text-primary text-sm flex min-h-screen animate-fade-in"
+      x-data="dashboard()" x-cloak>
 
-<div class="summary-bar">
-  <div class="summary-item green">
-    <div class="summary-count" id="greenCount">—</div>
-    <div class="summary-label">Migrated</div>
-  </div>
-  <div class="summary-item yellow">
-    <div class="summary-count" id="yellowCount">—</div>
-    <div class="summary-label">Ready to migrate</div>
-  </div>
-  <div class="summary-item red">
-    <div class="summary-count" id="redCount">—</div>
-    <div class="summary-label">Manual action required</div>
-  </div>
-</div>
+<!-- ════════ SIDEBAR ════════ -->
+<aside class="w-[220px] min-h-screen bg-sidebar-bg border-r border-sidebar-border flex flex-col flex-shrink-0 fixed top-0 left-0 h-full z-[200]">
+  <a class="flex items-center gap-[9px] px-4 py-[18px] pb-4 border-b border-sidebar-border no-underline" href="#">
+    <svg aria-hidden="true" fill="none" height="26" width="29" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
+      <path clip-rule="evenodd" d="m9.144 21.802.693-.894h5.126l2.672 3.415-.475 1.159h-6.61l.158-1.159-1.564-2.52Z" fill="#169FCC" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="m10.711 10.158 2.476-4.278h2.884L29 20.903l-1.003 4.579h-5.543l.347-1.286-12.09-14.038Z" fill="#14B59A" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="m13.717 5.068 1.185-2.193L18.457 0l6.093 4.778-.79.807 1.06 1.468v1.572l-3.036 2.482-5.094-6.04h-2.973Z" fill="#1BC263" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="M4.301 14.621h1.61l4.2-3.514 5.565 6.469-1.57 2.356H8.97l-3.547 4.512-.815 1.038H0v-5.53l4.301-5.33Z" fill="#16BDCC" fill-rule="evenodd"></path>
+    </svg>
+    <span class="text-[13px] font-extrabold tracking-[1.5px] text-white uppercase">NGINX → Kong Migrator</span>
+  </a>
 
-<div class="toolbar">
-  <div class="toolbar-config">
-    <label>Ingress class <input type="text" id="ingressClass" class="input-white" value="kong" placeholder="kong"></label>
-    <label>Target namespace <input type="text" id="targetNamespace" class="input-white" placeholder="e.g. kong-prod"></label>
+  <div class="pt-5 pb-1">
+    <div class="text-[10px] font-bold tracking-[1px] uppercase text-sidebar-section px-4 pb-1.5">Migration</div>
+    <a class="flex items-center gap-[10px] px-4 py-2 text-[13px] font-semibold text-white bg-sidebar-active-bg border-l-2 border-accent cursor-pointer no-underline select-none" href="#">
+      <svg class="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+      Dashboard
+    </a>
   </div>
-  <div class="toolbar-divider"></div>
-  <button class="btn btn-primary" id="migrateSelectedBtn" onclick="migrateSelected()">Migrate Selected</button>
-  <button class="btn btn-copy" id="copySelectedBtn" onclick="copySelectedToNs()">Copy Selected to Namespace</button>
-  <button class="btn btn-secondary" onclick="loadIngresses()">↻ Refresh</button>
-  <div class="spacer"></div>
-  <div class="filter-row">
-    <input type="text" id="filterText" placeholder="Filter by name / namespace…" oninput="applyFilter()">
-    <select id="filterStatus" onchange="applyFilter()">
-      <option value="">All statuses</option>
-      <option value="0">Migrated</option>
-      <option value="1">Ready</option>
-      <option value="2">Manual</option>
-    </select>
+
+  <div class="mt-auto px-4 py-4 border-t border-sidebar-border text-xs text-sidebar-section">
+    <span class="block mb-0.5 text-sidebar-text font-medium">NGINX → Kong Migrator</span>
+    v0.1.0
   </div>
-</div>
+</aside>
 
-<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+<!-- ════════ MAIN ════════ -->
+<div class="ml-[220px] flex-1 flex flex-col min-h-screen">
 
-<div class="table-wrap">
-  <table id="mainTable">
-    <thead>
-      <tr>
-        <th style="width:32px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" title="Select all eligible"></th>
-        <th>Name</th>
-        <th>Namespace</th>
-        <th>Hosts</th>
-        <th>Status</th>
-        <th>NGINX Annotations</th>
-        <th>Actions Required</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody">
-      <tr><td colspan="7" class="loading">Loading…</td></tr>
-    </tbody>
-  </table>
+  <!-- Page header -->
+  <div class="flex items-center justify-between px-6 pt-5">
+    <div class="flex flex-col gap-1">
+      <div class="text-xs text-text-muted flex items-center gap-1.5">
+        Migration
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="text-accent font-medium">Dashboard</span>
+      </div>
+      <h1 class="text-[20px] font-bold text-text-primary tracking-[-0.3px]">Ingress Migration</h1>
+    </div>
+  </div>
+
+  <!-- Summary pills -->
+  <div class="flex items-center gap-2 px-6 pt-4">
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-green-bg border-status-green-border text-status-green cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-green flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryGreen"></span>
+      Migrated
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-yellow-bg border-status-yellow-border text-status-yellow cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-yellow flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryYellow"></span>
+      Ready to Migrate
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-red-bg border-status-red-border text-status-red cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-red flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryRed"></span>
+      Manual Action Required
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="flex items-center gap-2 px-6 py-3.5 flex-wrap">
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-text-secondary whitespace-nowrap">
+        Ingress class
+        <input type="text" x-model="ingressClass"
+               class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[12px] font-mono bg-white text-text-primary outline-none w-[120px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+               placeholder="kong">
+      </label>
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-text-secondary whitespace-nowrap">
+        Target namespace
+        <input type="text" x-model="targetNamespace"
+               class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none w-[160px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+               placeholder="e.g. kong-prod">
+      </label>
+    </div>
+    <div class="w-px h-[22px] bg-border-ui mx-1 flex-shrink-0"></div>
+    <button @click="migrateSelected()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Migrate Selected
+    </button>
+    <button @click="copySelectedToNs()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+      Copy to Namespace
+    </button>
+    <button @click="loadIngresses()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-transparent text-text-secondary font-semibold text-[13px] hover:bg-[#f9fafb] hover:text-text-primary active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Refresh
+    </button>
+    <div class="flex-1"></div>
+    <div class="flex gap-2 items-center">
+      <input type="text" x-model="filterText"
+             class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none w-[220px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+             placeholder="Filter by name / namespace…">
+      <select x-model="filterStatus"
+              class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)]">
+        <option value="">All statuses</option>
+        <option value="0">Migrated</option>
+        <option value="1">Ready</option>
+        <option value="2">Manual</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Feedback toast -->
+  <div x-show="feedback.visible"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 -translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0"
+       :class="{
+         'bg-status-green-bg border-status-green-border text-status-green': feedback.type === 'success',
+         'bg-status-red-bg border-status-red-border text-status-red': feedback.type === 'error',
+         'bg-accent-subtle border-[rgba(20,102,255,0.20)] text-accent': feedback.type === 'info',
+         'bg-status-yellow-bg border-status-yellow-border text-status-yellow': feedback.type === 'warning',
+       }"
+       x-text="feedback.message"
+       class="mx-6 mb-3 px-3.5 py-2 rounded-[6px] border text-[13px] font-medium"
+       role="status" aria-live="polite">
+  </div>
+
+  <!-- Table -->
+  <div class="px-6 pb-6">
+    <div class="bg-white border border-border-ui rounded-[8px] overflow-hidden shadow-[0_1px_4px_rgba(15,28,46,0.06)]">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-[#f5f7fa]">
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap w-9">
+              <input type="checkbox"
+                     :checked="allEligibleSelected"
+                     :indeterminate.prop="someEligibleSelected"
+                     @change="toggleSelectAll()"
+                     title="Select all eligible">
+            </th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Name</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Namespace</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Hosts</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Status</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">NGINX Annotations</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Actions Required</th>
+          </tr>
+        </thead>
+
+        <!-- Loading state -->
+        <tbody x-show="loading">
+          <tr>
+            <td colspan="7" class="text-center py-12 text-text-muted font-mono text-xs tracking-[0.5px] animate-pulse-opacity">
+              Loading ingresses…
+            </td>
+          </tr>
+        </tbody>
+
+        <!-- Empty state -->
+        <tbody x-show="!loading && filteredIngresses.length === 0">
+          <tr>
+            <td colspan="7" class="text-center py-14 text-text-muted">
+              <strong class="text-text-secondary block mb-1.5 font-semibold">No ingresses found</strong>
+              <p class="text-[13px]">Try adjusting the filter or check your kubeconfig.</p>
+            </td>
+          </tr>
+        </tbody>
+
+        <!-- One <tbody> per ingress row -->
+        <template x-for="ing in filteredIngresses" :key="ing.namespace + '/' + ing.name">
+          <tbody class="ing-tbody" :class="{ 'is-expanded': isExpanded(ing) }">
+            <!-- Main row -->
+            <tr @click="toggleDetail(ing)">
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle" @click.stop>
+                <input type="checkbox"
+                       :disabled="ing.status !== 1"
+                       :checked="isSelected(ing)"
+                       @change="toggleRow(ing)">
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <strong class="font-semibold" x-text="ing.name"></strong>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] text-text-secondary" x-text="ing.namespace"></td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] font-mono text-[12px]">
+                <span x-show="ing.hosts && ing.hosts.length > 0" x-text="(ing.hosts || []).join(', ')"></span>
+                <span x-show="!ing.hosts || ing.hosts.length === 0" class="text-text-muted">—</span>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <span class="inline-flex items-center px-[9px] py-[3px] rounded-full font-mono text-[11px] font-semibold tracking-[0.2px] border whitespace-nowrap"
+                      :class="{
+                        'bg-status-green-bg border-status-green-border text-status-green': ing.status === 0,
+                        'bg-status-yellow-bg border-status-yellow-border text-status-yellow': ing.status === 1,
+                        'bg-status-red-bg border-status-red-border text-status-red': ing.status === 2
+                      }">
+                  <span class="inline-block w-[5px] h-[5px] rounded-full bg-current mr-1.5 flex-shrink-0"></span>
+                  <span x-text="statusLabel(ing.status)"></span>
+                </span>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] font-mono text-[12px] text-text-secondary" x-text="ing.annotationCount || 0"></td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <template x-if="ing.actionNotes && ing.actionNotes.length > 0">
+                  <span class="font-mono text-[10px] font-semibold bg-status-yellow-bg text-status-yellow border border-status-yellow-border rounded-full px-2 py-[2px] cursor-help tracking-[0.3px]"
+                        title="Manual steps required after migration">Action needed</span>
+                </template>
+                <template x-if="!ing.actionNotes || ing.actionNotes.length === 0">
+                  <span class="text-text-muted">—</span>
+                </template>
+              </td>
+            </tr>
+
+            <!-- Detail row -->
+            <tr x-show="isExpanded(ing)"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1">
+              <td colspan="7" class="p-0 bg-[#f8faff] border-b border-border-ui">
+                <div class="px-6 py-[18px] border-t-2 border-accent">
+                  <!-- 3-column grid -->
+                  <div class="grid grid-cols-3 gap-4 mb-3.5 items-start">
+
+                    <!-- Col 1: Action Required -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Action Required</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="!ing.actionNotes || ing.actionNotes.length === 0">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="note in (ing.actionNotes || [])" :key="note">
+                          <li class="bg-status-yellow-bg border border-status-yellow-border text-status-yellow rounded-[6px] px-2.5 py-1 text-[12px]" x-text="note"></li>
+                        </template>
+                      </ul>
+                    </div>
+
+                    <!-- Col 2: Unmigrated Annotations -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Unmigrated Annotations</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="!ing.unmigratedKeys || ing.unmigratedKeys.length === 0">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="key in (ing.unmigratedKeys || [])" :key="key">
+                          <li class="bg-status-red-bg border border-status-red-border text-status-red rounded-[6px] px-2.5 py-1 text-[12px]">
+                            <code class="font-mono text-[11px] text-accent" x-text="key"></code>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+
+                    <!-- Col 3: Generated Kong Resources -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Generated Kong Resources</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="(!ing.generatedPlugins || ing.generatedPlugins.length === 0) && (!ing.generatedUpstreamPolicies || ing.generatedUpstreamPolicies.length === 0)">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="p in (ing.generatedPlugins || [])" :key="'plugin-' + p">
+                          <li class="bg-white border border-border-ui rounded-[6px] px-2.5 py-[3px] text-[12px] text-text-secondary">
+                            <span class="font-mono text-[10px] text-text-muted mr-1">KongPlugin ·</span><code class="font-mono text-[11px] text-accent" x-text="p"></code>
+                          </li>
+                        </template>
+                        <template x-for="p in (ing.generatedUpstreamPolicies || [])" :key="'upstream-' + p">
+                          <li class="bg-white border border-border-ui rounded-[6px] px-2.5 py-[3px] text-[12px] text-text-secondary">
+                            <span class="font-mono text-[10px] text-text-muted mr-1">KongUpstreamPolicy ·</span><code class="font-mono text-[11px] text-accent" x-text="p"></code>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+
+                  </div><!-- /grid -->
+
+                  <!-- Action buttons -->
+                  <div class="flex flex-wrap gap-2 mt-2.5">
+                    <a :href="`/api/ingress/${ing.namespace}/${ing.name}/download?format=kong-ingress`"
+                       download
+                       class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
+                      ↓ Kong Ingress YAML
+                    </a>
+                    <a :href="`/api/ingress/${ing.namespace}/${ing.name}/download?format=gateway-api`"
+                       download
+                       class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
+                      ↓ Gateway API YAML
+                    </a>
+                    <template x-if="ing.status === 1">
+                      <button @click.stop="migrateSingle(ing.namespace, ing.name)"
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+                        ⬆ Migrate to Kong
+                      </button>
+                    </template>
+                    <template x-if="ing.status !== 1">
+                      <button disabled
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] opacity-40 cursor-not-allowed whitespace-nowrap"
+                              title="Cannot auto-migrate">
+                        ⬆ Migrate (blocked)
+                      </button>
+                    </template>
+                    <template x-if="ing.status === 1">
+                      <button @click.stop="copyToNsSingle(ing.namespace, ing.name)"
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+                        Copy to Namespace
+                      </button>
+                    </template>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </template>
+
+      </table>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<!-- ════════ CONFIRM MODAL ════════ -->
+<div x-show="modal.open"
+     x-transition:enter="transition ease-out duration-[180ms]"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @keydown.escape.window="modalCancel()"
+     @click.self="modalCancel()"
+     class="fixed inset-0 bg-[rgba(9,20,38,0.55)] backdrop-blur-sm flex items-center justify-center z-[1000] p-6"
+     role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="bg-white rounded-[10px] border border-border-ui shadow-2xl w-full max-w-[440px] animate-modal-in">
+    <div class="flex items-start gap-3.5 p-5 pb-0">
+      <div class="flex-shrink-0 w-[38px] h-[38px] rounded-[8px] bg-status-yellow-bg border border-status-yellow-border flex items-center justify-center">
+        <svg class="text-status-yellow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="flex-1 pt-0.5">
+        <div class="text-[15px] font-bold text-text-primary leading-[1.3]" id="modalTitle">Manual Steps Required</div>
+        <div class="text-[13px] text-text-secondary mt-[3px] leading-[1.5]">These ingresses need manual configuration after migration. Review the items below before proceeding.</div>
+      </div>
+    </div>
+    <div class="px-5 py-3.5">
+      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+        <template x-for="note in modal.notes" :key="note">
+          <li class="flex items-baseline gap-2 text-[13px] text-text-secondary bg-status-yellow-bg border border-status-yellow-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
+            <span class="inline-block w-[5px] h-[5px] rounded-full bg-status-yellow flex-shrink-0 mt-1 self-start"></span>
+            <span x-text="note"></span>
+          </li>
+        </template>
+      </ul>
+    </div>
+    <div class="flex justify-end gap-2 px-5 py-3 pb-4 border-t border-border-subtle">
+      <button @click="modalCancel()"
+              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] hover:bg-[#f9fafb] hover:text-text-primary hover:border-[#c5ced9] active:translate-y-px transition-all duration-100 cursor-pointer">
+        Cancel
+      </button>
+      <button @click="modalProceed()"
+              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer">
+        Proceed Anyway
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
-  'use strict';
+  function dashboard() {
+    return {
+      // ── Data ──────────────────────────────────────────────────────────────
+      allIngresses: [],
 
-  let allIngresses = [];
-  let visibleIngresses = [];
+      // ── Filter state (x-model) ────────────────────────────────────────────
+      filterText: '',
+      filterStatus: '',
 
-  // ── Data loading ──────────────────────────────────────────────────────────
+      // ── Config inputs (x-model) ───────────────────────────────────────────
+      ingressClass: 'kong',
+      targetNamespace: '',
 
-  async function loadIngresses() {
-    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading…</td></tr>';
-    clearFeedback();
-    try {
-      const resp = await fetch('/api/ingresses');
-      if (!resp.ok) throw new Error(await resp.text());
-      const data = await resp.json();
-      allIngresses = data || [];
-      applyFilter();
-      updateSummary(allIngresses);
-    } catch (e) {
-      showFeedback('Failed to load ingresses: ' + e.message, 'error');
-      document.getElementById('tableBody').innerHTML =
-        '<tr><td colspan="7" class="empty-state"><strong>Error loading data</strong><p>' + escHtml(e.message) + '</p></td></tr>';
-    }
+      // ── UI state ──────────────────────────────────────────────────────────
+      loading: true,
+      expandedRow: null,   // "namespace/name" key
+
+      // ── Selection (plain object — JS Set is opaque to Alpine proxy) ───────
+      selectedRows: {},
+
+      // ── Feedback toast ────────────────────────────────────────────────────
+      feedback: { visible: false, message: '', type: '', _timer: null },
+
+      // ── Confirmation modal ────────────────────────────────────────────────
+      modal: { open: false, notes: [], resolve: null },
+
+      // ── Computed getters ──────────────────────────────────────────────────
+
+      get filteredIngresses() {
+        const text   = this.filterText.toLowerCase();
+        const status = this.filterStatus;
+        return this.allIngresses.filter(ing => {
+          const matchText   = !text || ing.name.toLowerCase().includes(text) || ing.namespace.toLowerCase().includes(text);
+          const matchStatus = status === '' || String(ing.status) === status;
+          return matchText && matchStatus;
+        });
+      },
+
+      get summaryGreen()  { return this.allIngresses.filter(i => i.status === 0).length; },
+      get summaryYellow() { return this.allIngresses.filter(i => i.status === 1).length; },
+      get summaryRed()    { return this.allIngresses.filter(i => i.status === 2).length; },
+
+      get allEligibleSelected() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        if (eligible.length === 0) return false;
+        return eligible.every(i => !!this.selectedRows[i.namespace + '/' + i.name]);
+      },
+
+      get someEligibleSelected() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        if (eligible.length === 0) return false;
+        const sel = eligible.filter(i => !!this.selectedRows[i.namespace + '/' + i.name]).length;
+        return sel > 0 && sel < eligible.length;
+      },
+
+      get selectedCount() { return Object.keys(this.selectedRows).length; },
+
+      // ── Init ──────────────────────────────────────────────────────────────
+      async init() { await this.loadIngresses(); },
+
+      // ── Data loading ──────────────────────────────────────────────────────
+      async loadIngresses() {
+        this.loading = true;
+        this.selectedRows = {};
+        this.expandedRow  = null;
+        this.clearFeedback();
+        try {
+          const resp = await fetch('/api/ingresses');
+          if (!resp.ok) throw new Error(await resp.text());
+          const data = await resp.json();
+          this.allIngresses = data || [];
+        } catch (e) {
+          this.showFeedback('Failed to load ingresses: ' + e.message, 'error');
+          this.allIngresses = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // ── Row expand/collapse ───────────────────────────────────────────────
+      toggleDetail(ing) {
+        const key = ing.namespace + '/' + ing.name;
+        this.expandedRow = this.expandedRow === key ? null : key;
+      },
+
+      isExpanded(ing) {
+        return this.expandedRow === (ing.namespace + '/' + ing.name);
+      },
+
+      // ── Row selection ─────────────────────────────────────────────────────
+      isSelected(ing) {
+        return !!this.selectedRows[ing.namespace + '/' + ing.name];
+      },
+
+      toggleRow(ing) {
+        const key  = ing.namespace + '/' + ing.name;
+        const copy = { ...this.selectedRows };
+        if (copy[key]) { delete copy[key]; } else { copy[key] = true; }
+        this.selectedRows = copy;
+      },
+
+      toggleSelectAll() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        const copy     = { ...this.selectedRows };
+        if (this.allEligibleSelected) {
+          eligible.forEach(i => delete copy[i.namespace + '/' + i.name]);
+        } else {
+          eligible.forEach(i => { copy[i.namespace + '/' + i.name] = true; });
+        }
+        this.selectedRows = copy;
+      },
+
+      // ── Modal ─────────────────────────────────────────────────────────────
+      showModal(notes) {
+        return new Promise(resolve => {
+          this.modal = { open: true, notes, resolve };
+        });
+      },
+
+      modalProceed() {
+        const resolve = this.modal.resolve;
+        this.modal = { open: false, notes: [], resolve: null };
+        if (resolve) resolve(true);
+      },
+
+      modalCancel() {
+        const resolve = this.modal.resolve;
+        this.modal = { open: false, notes: [], resolve: null };
+        if (resolve) resolve(false);
+      },
+
+      // ── Migration helpers ─────────────────────────────────────────────────
+      async confirmMigration(ingresses) {
+        const notes = new Set();
+        for (const ref of ingresses) {
+          const ing = this.allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
+          if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
+        }
+        if (notes.size === 0) return true;
+        return this.showModal([...notes]);
+      },
+
+      _parseSelected() {
+        return Object.keys(this.selectedRows).map(key => {
+          const idx = key.indexOf('/');
+          return { namespace: key.substring(0, idx), name: key.substring(idx + 1) };
+        });
+      },
+
+      // ── Migrate ───────────────────────────────────────────────────────────
+      async migrateSingle(ns, name) {
+        if (!(await this.confirmMigration([{ namespace: ns, name }]))) return;
+        this.showFeedback(`Migrating ${ns}/${name}…`, 'info');
+        try {
+          const resp = await fetch('/api/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses: [{ namespace: ns, name }], ingressClass: this.ingressClass || 'kong' })
+          });
+          const results = await resp.json();
+          const r = results[0];
+          if (r.success) { this.showFeedback(`✓ Successfully migrated ${ns}/${name}`, 'success'); }
+          else { this.showFeedback(`✗ Migration failed for ${ns}/${name}: ${r.error}`, 'error'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      async migrateSelected() {
+        const ingresses = this._parseSelected();
+        if (ingresses.length === 0) { this.showFeedback('No ingresses selected.', 'info'); return; }
+        if (!(await this.confirmMigration(ingresses))) return;
+        this.showFeedback(`Migrating ${ingresses.length} ingress(es)…`, 'info');
+        try {
+          const resp = await fetch('/api/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses, ingressClass: this.ingressClass || 'kong' })
+          });
+          const results = await resp.json();
+          const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
+          let msg = `✓ Migrated ${ok.length}/${results.length} ingress(es)`;
+          if (fail.length > 0) {
+            msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+            this.showFeedback(msg, 'warning');
+          } else { this.showFeedback(msg, 'success'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      // ── Copy to Namespace ─────────────────────────────────────────────────
+      async copyToNsSingle(ns, name) {
+        const targetNamespace = this.targetNamespace.trim();
+        if (!targetNamespace) { this.showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
+        if (!(await this.confirmMigration([{ namespace: ns, name }]))) return;
+        this.showFeedback(`Copying ${ns}/${name} to namespace "${targetNamespace}"…`, 'info');
+        try {
+          const resp = await fetch('/api/copy-to-namespace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses: [{ namespace: ns, name }], ingressClass: this.ingressClass || 'kong', targetNamespace })
+          });
+          const results = await resp.json();
+          const r = results[0];
+          if (r.success) { this.showFeedback(`✓ Copied ${ns}/${name} to namespace "${targetNamespace}"`, 'success'); }
+          else { this.showFeedback(`✗ Copy failed for ${ns}/${name}: ${r.error}`, 'error'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      async copySelectedToNs() {
+        const targetNamespace = this.targetNamespace.trim();
+        if (!targetNamespace) { this.showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
+        const ingresses = this._parseSelected();
+        if (ingresses.length === 0) { this.showFeedback('No ingresses selected.', 'info'); return; }
+        if (!(await this.confirmMigration(ingresses))) return;
+        this.showFeedback(`Copying ${ingresses.length} ingress(es) to namespace "${targetNamespace}"…`, 'info');
+        try {
+          const resp = await fetch('/api/copy-to-namespace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses, ingressClass: this.ingressClass || 'kong', targetNamespace })
+          });
+          const results = await resp.json();
+          const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
+          let msg = `✓ Copied ${ok.length}/${results.length} ingress(es) to "${targetNamespace}"`;
+          if (fail.length > 0) {
+            msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+            this.showFeedback(msg, 'warning');
+          } else { this.showFeedback(msg, 'success'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      // ── Feedback ──────────────────────────────────────────────────────────
+      showFeedback(msg, type) {
+        if (this.feedback._timer) clearTimeout(this.feedback._timer);
+        const timer = setTimeout(() => { this.feedback = { ...this.feedback, visible: false }; }, 8000);
+        this.feedback = { visible: true, message: msg, type: type || '', _timer: timer };
+      },
+
+      clearFeedback() {
+        if (this.feedback._timer) clearTimeout(this.feedback._timer);
+        this.feedback = { visible: false, message: '', type: '', _timer: null };
+      },
+
+      // ── Helpers ───────────────────────────────────────────────────────────
+      statusLabel(s) { return ['Migrated', 'Ready', 'Manual'][s] ?? 'Manual'; },
+    };
   }
-
-  // ── Summary ───────────────────────────────────────────────────────────────
-
-  function updateSummary(data) {
-    document.getElementById('greenCount').textContent  = data.filter(i => i.status === 0).length;
-    document.getElementById('yellowCount').textContent = data.filter(i => i.status === 1).length;
-    document.getElementById('redCount').textContent    = data.filter(i => i.status === 2).length;
-  }
-
-  // ── Filter ────────────────────────────────────────────────────────────────
-
-  function applyFilter() {
-    const text   = document.getElementById('filterText').value.toLowerCase();
-    const status = document.getElementById('filterStatus').value;
-    visibleIngresses = allIngresses.filter(ing => {
-      const matchText   = !text || ing.name.toLowerCase().includes(text) || ing.namespace.toLowerCase().includes(text);
-      const matchStatus = status === '' || String(ing.status) === status;
-      return matchText && matchStatus;
-    });
-    renderTable(visibleIngresses);
-  }
-
-  // ── Rendering ─────────────────────────────────────────────────────────────
-
-  function statusClass(s) { return ['green', 'yellow', 'red'][s] ?? 'red'; }
-  function statusLabel(s) { return ['Migrated', 'Ready', 'Manual'][s] ?? 'Manual'; }
-  function statusIcon(s)  { return ''; }
-
-  function renderTable(data) {
-    const tbody = document.getElementById('tableBody');
-    if (!data || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><strong>No ingresses found</strong><p>Try adjusting the filter or check your kubeconfig.</p></td></tr>';
-      document.getElementById('selectAll').indeterminate = false;
-      document.getElementById('selectAll').checked = false;
-      return;
-    }
-
-    const rows = data.map(ing => {
-      const eligible = ing.status === 1;
-      const sc = statusClass(ing.status);
-      const hosts = (ing.hosts && ing.hosts.length) ? escHtml(ing.hosts.join(', ')) : '<span style="color:var(--text-muted)">—</span>';
-      const checkboxAttrs = eligible
-        ? `class="row-check" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}"`
-        : `class="row-check" disabled title="Cannot migrate: unmigrated annotations remain"`;
-      return `<tr class="ingress-row" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}" onclick="handleRowClick(event, this)">
-        <td onclick="event.stopPropagation()"><input type="checkbox" ${checkboxAttrs}></td>
-        <td><strong>${escHtml(ing.name)}</strong></td>
-        <td style="color:var(--text-secondary)">${escHtml(ing.namespace)}</td>
-        <td style="font-family:var(--font-mono);font-size:12px">${hosts}</td>
-        <td><span class="badge ${sc}">${statusIcon(ing.status)}${statusLabel(ing.status)}</span></td>
-        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${ing.annotationCount || 0}</td>
-        <td>${ing.actionNotes && ing.actionNotes.length > 0 ? '<span class="action-chip" title="Manual steps required after migration">Action needed</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
-      </tr>`;
-    });
-
-    tbody.innerHTML = rows.join('');
-    updateSelectAll();
-  }
-
-  function handleRowClick(event, tr) {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'A') return;
-    const ns   = tr.dataset.ns;
-    const name = tr.dataset.name;
-    const ing  = allIngresses.find(i => i.namespace === ns && i.name === name);
-    if (!ing) return;
-    toggleDetail(tr, ing);
-  }
-
-  function toggleDetail(tr, ing) {
-    const next = tr.nextElementSibling;
-    if (next && next.classList.contains('detail-row')) {
-      next.remove();
-      tr.classList.remove('selected-row');
-      return;
-    }
-    // Close any other open detail rows first
-    document.querySelectorAll('tr.detail-row').forEach(r => r.remove());
-    document.querySelectorAll('tr.ingress-row.selected-row').forEach(r => r.classList.remove('selected-row'));
-    tr.classList.add('selected-row');
-
-    const eligible = ing.status === 1;
-    let content = '';
-
-    if (ing.actionNotes && ing.actionNotes.length > 0) {
-      const items = ing.actionNotes.map(n => `<li class="warning-note">${escHtml(n)}</li>`).join('');
-      content += `<div class="section"><h4>Action Required Before Migration</h4><ul>${items}</ul></div>`;
-    }
-
-    if (ing.unmigratedKeys && ing.unmigratedKeys.length > 0) {
-      const items = ing.unmigratedKeys.map(k => `<li class="error-note"><code>${escHtml(k)}</code></li>`).join('');
-      content += `<div class="section"><h4>Unmigrated Annotations (no Kong equivalent)</h4><ul>${items}</ul></div>`;
-    }
-
-    if (ing.generatedPlugins && ing.generatedPlugins.length > 0) {
-      const items = ing.generatedPlugins.map(p => `<li><code>${escHtml(p)}</code></li>`).join('');
-      content += `<div class="section"><h4>Generated KongPlugins</h4><ul>${items}</ul></div>`;
-    }
-
-    const ns   = escAttr(ing.namespace);
-    const name = escAttr(ing.name);
-    content += `<div class="actions">
-      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=kong-ingress" download>↓ Kong Ingress YAML</a>
-      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=gateway-api" download>↓ Gateway API YAML</a>
-      ${eligible ? `<button class="btn btn-primary" onclick="migrateSingle('${ns}','${name}')">⬆ Migrate to Kong</button>` : `<button class="btn btn-secondary" disabled title="Cannot auto-migrate">⬆ Migrate (blocked)</button>`}
-      ${eligible ? `<button class="btn btn-copy" onclick="copyToNsSingle('${ns}','${name}')">Copy to Namespace</button>` : ''}
-    </div>`;
-
-    const detailTr = document.createElement('tr');
-    detailTr.className = 'detail-row';
-    detailTr.innerHTML = `<td colspan="7"><div class="detail-content">${content}</div></td>`;
-    tr.insertAdjacentElement('afterend', detailTr);
-  }
-
-  // ── Select all ────────────────────────────────────────────────────────────
-
-  function toggleSelectAll(cb) {
-    document.querySelectorAll('.row-check:not(:disabled)').forEach(c => c.checked = cb.checked);
-  }
-
-  function updateSelectAll() {
-    const all     = document.querySelectorAll('.row-check:not(:disabled)');
-    const checked = document.querySelectorAll('.row-check:not(:disabled):checked');
-    const sa = document.getElementById('selectAll');
-    if (all.length === 0) {
-      sa.indeterminate = false;
-      sa.checked = false;
-    } else if (checked.length === all.length) {
-      sa.indeterminate = false;
-      sa.checked = true;
-    } else if (checked.length === 0) {
-      sa.indeterminate = false;
-      sa.checked = false;
-    } else {
-      sa.indeterminate = true;
-    }
-  }
-
-  document.addEventListener('change', e => {
-    if (e.target.classList.contains('row-check')) updateSelectAll();
-  });
-
-  // ── Migration ─────────────────────────────────────────────────────────────
-
-  function confirmMigration(ingresses) {
-    const notes = new Set();
-    for (const ref of ingresses) {
-      const ing = allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
-      if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
-    }
-    if (notes.size === 0) return true;
-    const list = [...notes].map(n => `• ${n}`).join('\n');
-    return window.confirm(
-      `The following ingress(es) require manual steps after migration:\n\n${list}\n\nProceed anyway?`
-    );
-  }
-
-  async function migrateSingle(ns, name) {
-    if (!confirmMigration([{namespace: ns, name: name}])) return;
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    showFeedback(`Migrating ${ns}/${name}…`, 'info');
-    try {
-      const resp = await fetch('/api/migrate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass})
-      });
-      const results = await resp.json();
-      const r = results[0];
-      if (r.success) {
-        showFeedback(`✓ Successfully migrated ${ns}/${name}`, 'success');
-      } else {
-        showFeedback(`✗ Migration failed for ${ns}/${name}: ${r.error}`, 'error');
-      }
-      await loadIngresses();
-    } catch (e) {
-      showFeedback('Request error: ' + e.message, 'error');
-    }
-  }
-
-  async function migrateSelected() {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
-    if (checked.length === 0) {
-      showFeedback('No ingresses selected. Check one or more green/yellow rows first.', 'info');
-      return;
-    }
-    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
-    if (!confirmMigration(ingresses)) return;
-    showFeedback(`Migrating ${ingresses.length} ingress(es)…`, 'info');
-    try {
-      const resp = await fetch('/api/migrate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses, ingressClass})
-      });
-      const results = await resp.json();
-      const ok   = results.filter(r => r.success);
-      const fail = results.filter(r => !r.success);
-      let msg = `✓ Migrated ${ok.length}/${results.length} ingress(es)`;
-      if (fail.length > 0) {
-        msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
-        showFeedback(msg, 'warning');
-      } else {
-        showFeedback(msg, 'success');
-      }
-      await loadIngresses();
-    } catch (e) {
-      showFeedback('Request error: ' + e.message, 'error');
-    }
-  }
-
-  // ── Copy to Namespace ─────────────────────────────────────────────────────
-
-  async function copyToNsSingle(ns, name) {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const targetNamespace = document.getElementById('targetNamespace').value.trim();
-    if (!targetNamespace) {
-      showFeedback('Please fill in the "Target namespace" field before copying.', 'warning');
-      return;
-    }
-    if (!confirmMigration([{namespace: ns, name: name}])) return;
-    showFeedback(`Copying ${ns}/${name} to namespace "${targetNamespace}"…`, 'info');
-    try {
-      const resp = await fetch('/api/copy-to-namespace', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass, targetNamespace})
-      });
-      const results = await resp.json();
-      const r = results[0];
-      if (r.success) {
-        showFeedback(`✓ Copied ${ns}/${name} to namespace "${targetNamespace}"`, 'success');
-      } else {
-        showFeedback(`✗ Copy failed for ${ns}/${name}: ${r.error}`, 'error');
-      }
-      await loadIngresses();
-    } catch (e) {
-      showFeedback('Request error: ' + e.message, 'error');
-    }
-  }
-
-  async function copySelectedToNs() {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const targetNamespace = document.getElementById('targetNamespace').value.trim();
-    if (!targetNamespace) {
-      showFeedback('Please fill in the "Target namespace" field before copying.', 'warning');
-      return;
-    }
-    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
-    if (checked.length === 0) {
-      showFeedback('No ingresses selected. Check one or more Ready rows first.', 'info');
-      return;
-    }
-    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
-    if (!confirmMigration(ingresses)) return;
-    showFeedback(`Copying ${ingresses.length} ingress(es) to namespace "${targetNamespace}"…`, 'info');
-    try {
-      const resp = await fetch('/api/copy-to-namespace', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses, ingressClass, targetNamespace})
-      });
-      const results = await resp.json();
-      const ok   = results.filter(r => r.success);
-      const fail = results.filter(r => !r.success);
-      let msg = `✓ Copied ${ok.length}/${results.length} ingress(es) to "${targetNamespace}"`;
-      if (fail.length > 0) {
-        msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
-        showFeedback(msg, 'warning');
-      } else {
-        showFeedback(msg, 'success');
-      }
-      await loadIngresses();
-    } catch (e) {
-      showFeedback('Request error: ' + e.message, 'error');
-    }
-  }
-
-  // ── Feedback ──────────────────────────────────────────────────────────────
-
-  let feedbackTimer = null;
-  function showFeedback(msg, type) {
-    const el = document.getElementById('feedback');
-    el.textContent = msg;
-    el.className = 'feedback ' + (type || '');
-    if (feedbackTimer) clearTimeout(feedbackTimer);
-    feedbackTimer = setTimeout(clearFeedback, 8000);
-  }
-  function clearFeedback() {
-    const el = document.getElementById('feedback');
-    el.textContent = '';
-    el.className = 'feedback';
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  function escHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function escAttr(str) {
-    if (!str) return '';
-    return String(str).replace(/"/g, '%22').replace(/'/g, '%27');
-  }
-
-  // ── Boot ──────────────────────────────────────────────────────────────────
-  loadIngresses();
 </script>
+
 </body>
 </html>

@@ -21,18 +21,19 @@ const (
 
 // IngressAnalysis holds the migration analysis result for an Ingress.
 type IngressAnalysis struct {
-	Name             string   `json:"name"`
-	Namespace        string   `json:"namespace"`
-	Hosts            []string `json:"hosts"`
-	Status           Status   `json:"status"`
-	ActionNotes      []string `json:"actionNotes"`
-	UnmigratedKeys   []string `json:"unmigratedKeys"`
-	GeneratedPlugins []string `json:"generatedPlugins"`
-	AnnotationCount  int      `json:"annotationCount"`
+	Name                      string   `json:"name"`
+	Namespace                 string   `json:"namespace"`
+	Hosts                     []string `json:"hosts"`
+	Status                    Status   `json:"status"`
+	ActionNotes               []string `json:"actionNotes"`
+	UnmigratedKeys            []string `json:"unmigratedKeys"`
+	GeneratedPlugins          []string `json:"generatedPlugins"`
+	GeneratedUpstreamPolicies []string `json:"generatedUpstreamPolicies"`
+	AnnotationCount           int      `json:"annotationCount"`
 }
 
 var actionRequiredAnnotations = map[string]string{
-	"nginx.ingress.kubernetes.io/affinity":               "Session affinity (cookie) requires manual KongConsumer/KongPlugin configuration",
+	"nginx.ingress.kubernetes.io/affinity":               "Session affinity will require manual annotation of service with generated KongUpstreamPolicy",
 	"nginx.ingress.kubernetes.io/auth-secret":            "Basic auth requires manual KongConsumer and credentials setup",
 	"nginx.ingress.kubernetes.io/auth-signin":            "OIDC external auth requires KongPlugin oauth2 or oidc configuration",
 	"nginx.ingress.kubernetes.io/auth-tls-verify-client": "mTLS client verification requires manual certificate setup",
@@ -127,6 +128,12 @@ func Analyze(ing networkingv1.Ingress) IngressAnalysis {
 		generatedPlugins = append(generatedPlugins, p.Metadata.Name)
 	}
 
+	// Collect generated upstream policy names
+	var generatedUpstreamPolicies []string
+	for _, p := range upstreamPolicies {
+		generatedUpstreamPolicies = append(generatedUpstreamPolicies, p.Metadata.Name)
+	}
+
 	// Determine status: manual only if truly unmigrated (no Kong equivalent);
 	// action-note ingresses are still migratable (Yellow) but require manual followup.
 	var status Status
@@ -141,13 +148,14 @@ func Analyze(ing networkingv1.Ingress) IngressAnalysis {
 	sort.Strings(unmigratedKeys)
 
 	return IngressAnalysis{
-		Name:             ing.Name,
-		Namespace:        ing.Namespace,
-		Hosts:            hosts,
-		Status:           status,
-		ActionNotes:      actionNotes,
-		UnmigratedKeys:   unmigratedKeys,
-		GeneratedPlugins: generatedPlugins,
-		AnnotationCount:  annotationCount,
+		Name:                      ing.Name,
+		Namespace:                 ing.Namespace,
+		Hosts:                     hosts,
+		Status:                    status,
+		ActionNotes:               actionNotes,
+		UnmigratedKeys:            unmigratedKeys,
+		GeneratedPlugins:          generatedPlugins,
+		GeneratedUpstreamPolicies: generatedUpstreamPolicies,
+		AnnotationCount:           annotationCount,
 	}
 }
