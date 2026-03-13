@@ -470,8 +470,14 @@
       border-top: 2px solid var(--accent);
       animation: slideDown 0.15s ease;
     }
-    .detail-content .section { margin-bottom: 14px; }
-    .detail-content h4 {
+    .detail-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+    .detail-col h4 {
       font-family: var(--font-mono);
       font-size: 10px;
       font-weight: 600;
@@ -480,8 +486,8 @@
       color: var(--text-muted);
       margin-bottom: 8px;
     }
-    .detail-content ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
-    .detail-content ul li {
+    .detail-col ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .detail-col ul li {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -489,9 +495,16 @@
       font-size: 12px;
       color: var(--text-secondary);
     }
-    .detail-content ul li.warning-note { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-bg); }
-    .detail-content ul li.error-note   { border-color: var(--red-border);    color: var(--red);    background: var(--red-bg); }
-    .detail-content ul li code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+    .detail-col ul li.warning-note { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-bg); }
+    .detail-col ul li.error-note   { border-color: var(--red-border);    color: var(--red);    background: var(--red-bg); }
+    .detail-col ul li code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+    .detail-col ul li .resource-type {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+    .detail-col ul li.empty-col { color: var(--text-muted); border-color: transparent; background: transparent; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 
     /* ── Empty / loading ── */
@@ -860,18 +873,38 @@
     const eligible = ing.status === 1;
     let content = '';
 
-    if (ing.actionNotes && ing.actionNotes.length > 0) {
-      const items = ing.actionNotes.map(n => `<li class="warning-note">${escHtml(n)}</li>`).join('');
-      content += `<div class="section"><h4>Action Required Before Migration</h4><ul>${items}</ul></div>`;
-    }
-    if (ing.unmigratedKeys && ing.unmigratedKeys.length > 0) {
-      const items = ing.unmigratedKeys.map(k => `<li class="error-note"><code>${escHtml(k)}</code></li>`).join('');
-      content += `<div class="section"><h4>Unmigrated Annotations (no Kong equivalent)</h4><ul>${items}</ul></div>`;
-    }
-    if (ing.generatedPlugins && ing.generatedPlugins.length > 0) {
-      const items = ing.generatedPlugins.map(p => `<li><code>${escHtml(p)}</code></li>`).join('');
-      content += `<div class="section"><h4>Generated KongPlugins</h4><ul>${items}</ul></div>`;
-    }
+    const emptyHtml = '<li class="empty-col">—</li>';
+
+    const actionNotesHtml = (ing.actionNotes && ing.actionNotes.length > 0)
+      ? ing.actionNotes.map(n => `<li class="warning-note">${escHtml(n)}</li>`).join('')
+      : null;
+
+    const unmigratedHtml = (ing.unmigratedKeys && ing.unmigratedKeys.length > 0)
+      ? ing.unmigratedKeys.map(k => `<li class="error-note"><code>${escHtml(k)}</code></li>`).join('')
+      : null;
+
+    const pluginItems = (ing.generatedPlugins || []).map(p =>
+      `<li><span class="resource-type">KongPlugin ·</span><code>${escHtml(p)}</code></li>`);
+    const upstreamItems = (ing.generatedUpstreamPolicies || []).map(p =>
+      `<li><span class="resource-type">KongUpstreamPolicy ·</span><code>${escHtml(p)}</code></li>`);
+    const resourcesHtml = pluginItems.length + upstreamItems.length > 0
+      ? [...pluginItems, ...upstreamItems].join('')
+      : null;
+
+    content += `<div class="detail-columns">
+      <div class="detail-col">
+        <h4>Action Required</h4>
+        <ul>${actionNotesHtml || emptyHtml}</ul>
+      </div>
+      <div class="detail-col">
+        <h4>Unmigrated Annotations</h4>
+        <ul>${unmigratedHtml || emptyHtml}</ul>
+      </div>
+      <div class="detail-col">
+        <h4>Generated Kong Resources</h4>
+        <ul>${resourcesHtml || emptyHtml}</ul>
+      </div>
+    </div>`;
 
     const ns   = escAttr(ing.namespace);
     const name = escAttr(ing.name);
