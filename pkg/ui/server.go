@@ -255,10 +255,10 @@ func (s *srv) migrateOne(ctx context.Context, ns, name, ingressClass string) Mig
 		return result
 	}
 
-	// Only migrate Ready (yellow) ingresses
+	// Only migrate non-green ingresses
 	analysis := analyzer.Analyze(*ing)
-	if analysis.Status != analyzer.StatusYellow {
-		result.Error = "cannot migrate: only Ready ingresses can be migrated"
+	if analysis.Status == analyzer.StatusGreen {
+		result.Error = "cannot migrate: ingress is already migrated"
 		return result
 	}
 
@@ -374,10 +374,10 @@ func (s *srv) copyToNsOne(ctx context.Context, ns, name, ingressClass, targetNs 
 		return result
 	}
 
-	// Only Ready (yellow) ingresses can be copied
+	// Only non-green ingresses can be copied
 	analysis := analyzer.Analyze(*ing)
-	if analysis.Status != analyzer.StatusYellow {
-		result.Error = "cannot copy: only Ready ingresses can be copied to a namespace"
+	if analysis.Status == analyzer.StatusGreen {
+		result.Error = "cannot copy: ingress is already migrated"
 		return result
 	}
 

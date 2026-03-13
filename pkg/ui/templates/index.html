@@ -258,7 +258,7 @@
             <tr @click="toggleDetail(ing)">
               <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle" @click.stop>
                 <input type="checkbox"
-                       :disabled="ing.status !== 1"
+                       :disabled="ing.status === 0"
                        :checked="isSelected(ing)"
                        @change="toggleRow(ing)">
               </td>
@@ -383,20 +383,20 @@
                        class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
                       ↓ Gateway API YAML
                     </a>
-                    <template x-if="ing.status === 1">
+                    <template x-if="ing.status === 1 || ing.status === 2">
                       <button @click.stop="migrateSingle(ing.namespace, ing.name)"
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
                         ⬆ Migrate to Kong
                       </button>
                     </template>
-                    <template x-if="ing.status !== 1">
+                    <template x-if="ing.status === 0">
                       <button disabled
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] opacity-40 cursor-not-allowed whitespace-nowrap"
                               title="Cannot auto-migrate">
                         ⬆ Migrate (blocked)
                       </button>
                     </template>
-                    <template x-if="ing.status === 1">
+                    <template x-if="ing.status === 1 || ing.status === 2">
                       <button @click.stop="copyToNsSingle(ing.namespace, ing.name)"
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
                         Copy to Namespace
@@ -442,6 +442,18 @@
       </div>
     </div>
     <div class="px-5 py-3.5">
+      <!-- Unsupported annotations (red) -->
+      <template x-if="modal.unmigratedKeys && modal.unmigratedKeys.length > 0">
+        <ul class="flex flex-col gap-1.5 list-none p-0 m-0 mb-2">
+          <template x-for="key in modal.unmigratedKeys" :key="key">
+            <li class="flex items-baseline gap-2 text-[13px] text-status-red bg-status-red-bg border border-status-red-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
+              <span class="inline-block w-[5px] h-[5px] rounded-full bg-current flex-shrink-0 mt-1 self-start"></span>
+              <span>The annotation <code class="font-mono text-[11px]" x-text="key"></code> is not converted because not supported</span>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <!-- Action notes (yellow) -->
       <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
         <template x-for="note in modal.notes" :key="note">
           <li class="flex items-baseline gap-2 text-[13px] text-text-secondary bg-status-yellow-bg border border-status-yellow-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
@@ -543,7 +555,7 @@
       feedback: { visible: false, message: '', type: '', _timer: null },
 
       // ── Confirmation modal ────────────────────────────────────────────────
-      modal: { open: false, notes: [], resolve: null },
+      modal: { open: false, notes: [], unmigratedKeys: [], resolve: null },
 
       // ── YAML viewer modal ─────────────────────────────────────────────────
       yamlModal: { open: false, ingName: '', yaml: '' },
@@ -635,33 +647,35 @@
       },
 
       // ── Modal ─────────────────────────────────────────────────────────────
-      showModal(notes) {
+      showModal(notes, unmigratedKeys = []) {
         return new Promise(resolve => {
-          this.modal = { open: true, notes, resolve };
+          this.modal = { open: true, notes, unmigratedKeys, resolve };
         });
       },
 
       modalProceed() {
         const resolve = this.modal.resolve;
-        this.modal = { open: false, notes: [], resolve: null };
+        this.modal = { open: false, notes: [], unmigratedKeys: [], resolve: null };
         if (resolve) resolve(true);
       },
 
       modalCancel() {
         const resolve = this.modal.resolve;
-        this.modal = { open: false, notes: [], resolve: null };
+        this.modal = { open: false, notes: [], unmigratedKeys: [], resolve: null };
         if (resolve) resolve(false);
       },
 
       // ── Migration helpers ─────────────────────────────────────────────────
       async confirmMigration(ingresses) {
         const notes = new Set();
+        const unmigratedKeys = new Set();
         for (const ref of ingresses) {
           const ing = this.allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
           if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
+          if (ing && ing.unmigratedKeys) ing.unmigratedKeys.forEach(k => unmigratedKeys.add(k));
         }
-        if (notes.size === 0) return true;
-        return this.showModal([...notes]);
+        if (notes.size === 0 && unmigratedKeys.size === 0) return true;
+        return this.showModal([...notes], [...unmigratedKeys]);
       },
 
       _parseSelected() {
