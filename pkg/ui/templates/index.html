@@ -258,7 +258,7 @@
             <tr @click="toggleDetail(ing)">
               <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle" @click.stop>
                 <input type="checkbox"
-                       :disabled="ing.status !== 1"
+                       :disabled="ing.status === 0"
                        :checked="isSelected(ing)"
                        @change="toggleRow(ing)">
               </td>
@@ -358,6 +358,21 @@
 
                   <!-- Action buttons -->
                   <div class="flex flex-wrap gap-2 mt-2.5">
+                    <!-- View YAML -->
+                    <button
+                      @click.stop="viewYaml(ing.namespace, ing.name)"
+                      title="View Ingress YAML"
+                      class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] hover:text-accent active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-[14px] h-[14px]" fill="none"
+                           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943
+                                 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      View YAML
+                    </button>
                     <a :href="`/api/ingress/${ing.namespace}/${ing.name}/download?format=kong-ingress`"
                        download
                        class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
@@ -368,20 +383,20 @@
                        class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
                       ↓ Gateway API YAML
                     </a>
-                    <template x-if="ing.status === 1">
+                    <template x-if="ing.status === 1 || ing.status === 2">
                       <button @click.stop="migrateSingle(ing.namespace, ing.name)"
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
                         ⬆ Migrate to Kong
                       </button>
                     </template>
-                    <template x-if="ing.status !== 1">
+                    <template x-if="ing.status === 0">
                       <button disabled
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] opacity-40 cursor-not-allowed whitespace-nowrap"
                               title="Cannot auto-migrate">
                         ⬆ Migrate (blocked)
                       </button>
                     </template>
-                    <template x-if="ing.status === 1">
+                    <template x-if="ing.status === 1 || ing.status === 2">
                       <button @click.stop="copyToNsSingle(ing.namespace, ing.name)"
                               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
                         Copy to Namespace
@@ -427,6 +442,18 @@
       </div>
     </div>
     <div class="px-5 py-3.5">
+      <!-- Unsupported annotations (red) -->
+      <template x-if="modal.unmigratedKeys && modal.unmigratedKeys.length > 0">
+        <ul class="flex flex-col gap-1.5 list-none p-0 m-0 mb-2">
+          <template x-for="key in modal.unmigratedKeys" :key="key">
+            <li class="flex items-baseline gap-2 text-[13px] text-status-red bg-status-red-bg border border-status-red-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
+              <span class="inline-block w-[5px] h-[5px] rounded-full bg-current flex-shrink-0 mt-1 self-start"></span>
+              <span>The annotation <code class="font-mono text-[11px]" x-text="key"></code> is not converted because not supported</span>
+            </li>
+          </template>
+        </ul>
+      </template>
+      <!-- Action notes (yellow) -->
       <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
         <template x-for="note in modal.notes" :key="note">
           <li class="flex items-baseline gap-2 text-[13px] text-text-secondary bg-status-yellow-bg border border-status-yellow-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
@@ -444,6 +471,60 @@
       <button @click="modalProceed()"
               class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer">
         Proceed Anyway
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ YAML VIEWER MODAL ════════ -->
+<div x-show="yamlModal.open"
+     x-transition:enter="transition ease-out duration-[180ms]"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @keydown.escape.window="yamlModal.open = false"
+     @click.self="yamlModal.open = false"
+     class="fixed inset-0 bg-[rgba(9,20,38,0.55)] backdrop-blur-sm flex items-center justify-center z-[1000] p-6"
+     role="dialog" aria-modal="true">
+  <div class="bg-white rounded-[10px] border border-border-ui shadow-2xl w-full max-w-[760px] max-h-[85vh] flex flex-col animate-modal-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle">
+      <div class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px] text-accent" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943
+                   9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+        </svg>
+        <span class="text-[14px] font-bold text-text-primary"
+              x-text="`Ingress YAML — ${yamlModal.ingName}`"></span>
+      </div>
+      <button @click="yamlModal.open = false"
+              class="text-text-muted hover:text-text-primary transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Body -->
+    <div class="flex-1 overflow-hidden p-5">
+      <textarea readonly
+                x-text="yamlModal.yaml"
+                class="w-full h-full min-h-[420px] font-mono text-[12px] leading-relaxed
+                       bg-[#f5f7fa] border border-border-ui rounded-[6px] p-4
+                       text-text-primary resize-none focus:outline-none"
+                spellcheck="false"></textarea>
+    </div>
+    <!-- Footer -->
+    <div class="flex justify-end px-5 py-3 border-t border-border-subtle">
+      <button @click="yamlModal.open = false"
+              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] hover:bg-[#f9fafb] hover:text-text-primary hover:border-[#c5ced9] active:translate-y-px transition-all duration-100 cursor-pointer">
+        Close
       </button>
     </div>
   </div>
@@ -474,7 +555,10 @@
       feedback: { visible: false, message: '', type: '', _timer: null },
 
       // ── Confirmation modal ────────────────────────────────────────────────
-      modal: { open: false, notes: [], resolve: null },
+      modal: { open: false, notes: [], unmigratedKeys: [], resolve: null },
+
+      // ── YAML viewer modal ─────────────────────────────────────────────────
+      yamlModal: { open: false, ingName: '', yaml: '' },
 
       // ── Computed getters ──────────────────────────────────────────────────
 
@@ -563,33 +647,35 @@
       },
 
       // ── Modal ─────────────────────────────────────────────────────────────
-      showModal(notes) {
+      showModal(notes, unmigratedKeys = []) {
         return new Promise(resolve => {
-          this.modal = { open: true, notes, resolve };
+          this.modal = { open: true, notes, unmigratedKeys, resolve };
         });
       },
 
       modalProceed() {
         const resolve = this.modal.resolve;
-        this.modal = { open: false, notes: [], resolve: null };
+        this.modal = { open: false, notes: [], unmigratedKeys: [], resolve: null };
         if (resolve) resolve(true);
       },
 
       modalCancel() {
         const resolve = this.modal.resolve;
-        this.modal = { open: false, notes: [], resolve: null };
+        this.modal = { open: false, notes: [], unmigratedKeys: [], resolve: null };
         if (resolve) resolve(false);
       },
 
       // ── Migration helpers ─────────────────────────────────────────────────
       async confirmMigration(ingresses) {
         const notes = new Set();
+        const unmigratedKeys = new Set();
         for (const ref of ingresses) {
           const ing = this.allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
           if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
+          if (ing && ing.unmigratedKeys) ing.unmigratedKeys.forEach(k => unmigratedKeys.add(k));
         }
-        if (notes.size === 0) return true;
-        return this.showModal([...notes]);
+        if (notes.size === 0 && unmigratedKeys.size === 0) return true;
+        return this.showModal([...notes], [...unmigratedKeys]);
       },
 
       _parseSelected() {
@@ -693,6 +779,19 @@
       clearFeedback() {
         if (this.feedback._timer) clearTimeout(this.feedback._timer);
         this.feedback = { visible: false, message: '', type: '', _timer: null };
+      },
+
+      // ── YAML viewer ──────────────────────────────────────────────────────
+      async viewYaml(ns, name) {
+        try {
+          const res = await fetch(`/api/ingress-raw/${ns}/${name}`);
+          const text = await res.text();
+          this.yamlModal.ingName = name;
+          this.yamlModal.yaml = text;
+          this.yamlModal.open = true;
+        } catch (e) {
+          this.showFeedback('Failed to load YAML: ' + e.message, 'error');
+        }
       },
 
       // ── Helpers ───────────────────────────────────────────────────────────

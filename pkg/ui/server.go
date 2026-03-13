@@ -74,6 +74,7 @@ func Start(port int, namespace string, kubeconfig string) error {
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/api/ingresses", s.handleIngresses)
 	mux.HandleFunc("/api/ingress/", s.handleIngressDownload)
+	mux.HandleFunc("/api/ingress-raw/", s.handleIngressRaw)
 	mux.HandleFunc("/api/migrate", s.handleMigrate)
 	mux.HandleFunc("/api/copy-to-namespace", s.handleCopyToNamespace)
 
@@ -179,6 +180,32 @@ func (s *srv) handleIngressDownload(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
+// handleIngressRaw serves: GET /api/ingress-raw/{ns}/{name}
+func (s *srv) handleIngressRaw(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/ingress-raw/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+		http.NotFound(w, r)
+		return
+	}
+	ns, name := parts[0], parts[1]
+
+	ing, err := s.client.NetworkingV1().Ingresses(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data, err := yaml.Marshal(ing)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Write(data)
+}
+
 type migrateRequest struct {
 	Ingresses    []ingressRef `json:"ingresses"`
 	IngressClass string       `json:"ingressClass"`
@@ -228,10 +255,10 @@ func (s *srv) migrateOne(ctx context.Context, ns, name, ingressClass string) Mig
 		return result
 	}
 
-	// Only migrate Ready (yellow) ingresses
+	// Only migrate non-green ingresses
 	analysis := analyzer.Analyze(*ing)
-	if analysis.Status != analyzer.StatusYellow {
-		result.Error = "cannot migrate: only Ready ingresses can be migrated"
+	if analysis.Status == analyzer.StatusGreen {
+		result.Error = "cannot migrate: ingress is already migrated"
 		return result
 	}
 
@@ -347,10 +374,10 @@ func (s *srv) copyToNsOne(ctx context.Context, ns, name, ingressClass, targetNs 
 		return result
 	}
 
-	// Only Ready (yellow) ingresses can be copied
+	// Only non-green ingresses can be copied
 	analysis := analyzer.Analyze(*ing)
-	if analysis.Status != analyzer.StatusYellow {
-		result.Error = "cannot copy: only Ready ingresses can be copied to a namespace"
+	if analysis.Status == analyzer.StatusGreen {
+		result.Error = "cannot copy: ingress is already migrated"
 		return result
 	}
 
