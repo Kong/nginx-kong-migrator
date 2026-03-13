@@ -7,637 +7,97 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- 1. Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 2. Tailwind config — after CDN, before Alpine -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sidebar-bg': '#080f1f',
+            'sidebar-border': '#131e32',
+            'sidebar-text': '#6b82a0',
+            'sidebar-text-hover': '#c8d5e8',
+            'sidebar-active-bg': 'rgba(20,102,255,0.10)',
+            'sidebar-section': '#2e4060',
+            'accent': '#1466ff',
+            'accent-hover': '#0f54d6',
+            'accent-subtle': 'rgba(20,102,255,0.08)',
+            'kong-teal': '#00c2a8',
+            'status-green': '#027a55',
+            'status-green-bg': '#ecfdf5',
+            'status-green-border': '#a6f4c5',
+            'status-yellow': '#b54708',
+            'status-yellow-bg': '#fffaeb',
+            'status-yellow-border': '#fedf89',
+            'status-red': '#b42318',
+            'status-red-bg': '#fef3f2',
+            'status-red-border': '#fecdca',
+            'text-primary': '#0f1c2e',
+            'text-secondary': '#5a7184',
+            'text-muted': '#9aafc4',
+            'border-ui': '#e3e8ef',
+            'border-subtle': '#f0f3f7',
+            'copy-purple': '#6941c6',
+          },
+          fontFamily: {
+            'ui': ['"Plus Jakarta Sans"', 'sans-serif'],
+            'mono': ['"JetBrains Mono"', 'monospace'],
+          },
+          keyframes: {
+            fadeIn:       { from: { opacity: '0', transform: 'translateY(4px)' },          to: { opacity: '1', transform: 'translateY(0)' } },
+            slideDown:    { from: { opacity: '0', transform: 'translateY(-4px)' },         to: { opacity: '1', transform: 'translateY(0)' } },
+            modalIn:      { from: { opacity: '0', transform: 'translateY(-10px) scale(0.97)' }, to: { opacity: '1', transform: 'translateY(0) scale(1)' } },
+            pulseOpacity: { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.45' } },
+          },
+          animation: {
+            'fade-in':      'fadeIn 0.2s ease',
+            'slide-down':   'slideDown 0.15s ease',
+            'modal-in':     'modalIn 0.2s ease both',
+            'pulse-opacity':'pulseOpacity 1.6s ease-in-out infinite',
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- 3. Alpine.js v3 — defer -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
   <style>
-    :root {
-      /* Sidebar — dark navy */
-      --sidebar-bg:            #080f1f;
-      --sidebar-border:        #131e32;
-      --sidebar-text:          #6b82a0;
-      --sidebar-text-hover:    #c8d5e8;
-      --sidebar-text-active:   #ffffff;
-      --sidebar-active-bg:     rgba(20,102,255,0.10);
-      --sidebar-active-border: #1466ff;
-      --sidebar-section-label: #2e4060;
-      --sidebar-width:         220px;
-
-      /* Content — light */
-      --bg:               #f5f7fa;
-      --surface:          #ffffff;
-      --surface-hover:    #f9fafb;
-      --surface-selected: rgba(20,102,255,0.04);
-      --border:           #e3e8ef;
-      --border-subtle:    #f0f3f7;
-      --topbar-bg:        #ffffff;
-      --topbar-border:    #e3e8ef;
-
-      /* Text */
-      --text-primary:   #0f1c2e;
-      --text-secondary: #5a7184;
-      --text-muted:     #9aafc4;
-
-      /* Brand */
-      --accent:         #1466ff;
-      --accent-hover:   #0f54d6;
-      --accent-subtle:  rgba(20,102,255,0.08);
-      --kong-teal:      #00c2a8;
-      --kong-teal-dim:  rgba(0,194,168,0.10);
-
-      /* Status — calibrated for light bg */
-      --green:         #027a55;
-      --green-bg:      #ecfdf5;
-      --green-border:  #a6f4c5;
-      --yellow:        #b54708;
-      --yellow-bg:     #fffaeb;
-      --yellow-border: #fedf89;
-      --red:           #b42318;
-      --red-bg:        #fef3f2;
-      --red-border:    #fecdca;
-
-      --font-ui:   'Plus Jakarta Sans', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-      --radius:    6px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    @keyframes fadeIn    { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulse     { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
-
-    html, body { height: 100%; }
-
-    body {
-      font-family: var(--font-ui);
-      background: var(--bg);
-      color: var(--text-primary);
-      font-size: 14px;
-      display: flex;
-      animation: fadeIn 0.2s ease;
-    }
-
-    /* ════════════════════════════════════════════════════════
-       SIDEBAR
-    ════════════════════════════════════════════════════════ */
-    .sidebar {
-      width: var(--sidebar-width);
-      min-height: 100vh;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--sidebar-border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      position: fixed;
-      top: 0; left: 0;
-      height: 100%;
-      z-index: 200;
-    }
-
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 18px 16px 16px;
-      border-bottom: 1px solid var(--sidebar-border);
-      text-decoration: none;
-    }
-    .sidebar-logo svg { flex-shrink: 0; }
-    .sidebar-wordmark {
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 1.5px;
-      color: #ffffff;
-      text-transform: uppercase;
-    }
-
-    .sidebar-section {
-      padding: 20px 0 4px;
-    }
-    .sidebar-section-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--sidebar-section-label);
-      padding: 0 16px 6px;
-    }
-
-    .sidebar-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--sidebar-text);
-      cursor: pointer;
-      text-decoration: none;
-      border-left: 2px solid transparent;
-      transition: color 0.12s, background 0.12s, border-color 0.12s;
-      user-select: none;
-    }
-    .sidebar-item:hover {
-      color: var(--sidebar-text-hover);
-      background: rgba(255,255,255,0.04);
-    }
-    .sidebar-item.active {
-      color: var(--sidebar-text-active);
-      background: var(--sidebar-active-bg);
-      border-left-color: var(--sidebar-active-border);
-      font-weight: 600;
-    }
-    .sidebar-item svg { flex-shrink: 0; opacity: 0.7; }
-    .sidebar-item.active svg { opacity: 1; }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding: 16px;
-      border-top: 1px solid var(--sidebar-border);
-      font-size: 12px;
-      color: var(--sidebar-section-label);
-    }
-    .sidebar-footer span { display: block; margin-bottom: 2px; color: var(--sidebar-text); font-weight: 500; }
-
-    /* ════════════════════════════════════════════════════════
-       MAIN
-    ════════════════════════════════════════════════════════ */
-    .main {
-      margin-left: var(--sidebar-width);
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* ── Top bar ── */
-    .topbar {
-      height: 52px;
-      background: var(--topbar-bg);
-      border-bottom: 1px solid var(--topbar-border);
-      display: flex;
-      align-items: center;
-      padding: 0 24px;
-      gap: 12px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 1px 3px rgba(15,28,46,0.04);
-    }
-    .topbar-search {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 6px 12px;
-      flex: 1;
-      max-width: 360px;
-    }
-    .topbar-search input {
-      border: none;
-      outline: none;
-      background: transparent;
-      font-family: var(--font-ui);
-      font-size: 13px;
-      color: var(--text-primary);
-      width: 100%;
-    }
-    .topbar-search input::placeholder { color: var(--text-muted); }
-    .topbar-search svg { color: var(--text-muted); flex-shrink: 0; }
-    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    .topbar-avatar {
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #1466ff, #00c2a8);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: #fff;
-      letter-spacing: 0.3px;
-    }
-
-    /* ── Page header ── */
-    .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px 0;
-    }
-    .page-header-left { display: flex; flex-direction: column; gap: 4px; }
-    .page-breadcrumb {
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .page-breadcrumb span { color: var(--accent); font-weight: 500; }
-    .page-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: -0.3px;
-    }
-
-    /* ── Summary pills ── */
-    .summary-strip {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 16px 24px 0;
-    }
-    .summary-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 600;
-      border: 1px solid transparent;
-      cursor: default;
-    }
-    .summary-pill .pill-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-    }
-    .summary-pill .pill-count {
-      font-family: var(--font-mono);
-      font-weight: 700;
-    }
-    .summary-pill.green  { background: var(--green-bg);  border-color: var(--green-border);  color: var(--green); }
-    .summary-pill.yellow { background: var(--yellow-bg); border-color: var(--yellow-border); color: var(--yellow); }
-    .summary-pill.red    { background: var(--red-bg);    border-color: var(--red-border);    color: var(--red); }
-    .summary-pill.green  .pill-dot { background: var(--green); }
-    .summary-pill.yellow .pill-dot { background: var(--yellow); }
-    .summary-pill.red    .pill-dot { background: var(--red); }
-
-    /* ── Toolbar ── */
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 24px;
-      flex-wrap: wrap;
-    }
-    .toolbar-config { display: flex; align-items: center; gap: 8px; }
-    .toolbar-config label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      white-space: nowrap;
-    }
-    .toolbar-divider { width: 1px; height: 22px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
-    .spacer { flex: 1; }
-    .filter-row { display: flex; gap: 8px; align-items: center; }
-
-    /* ── Inputs ── */
-    .input-base {
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-family: var(--font-ui);
-      background: var(--surface);
-      color: var(--text-primary);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .input-base:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
-    .input-base::placeholder { color: var(--text-muted); }
-    .input-base option { background: var(--surface); color: var(--text-primary); }
-    .toolbar-config .input-base { width: 120px; font-family: var(--font-mono); font-size: 12px; }
-    .filter-row .input-base { font-size: 13px; }
-    .filter-row .input-base[type=text] { width: 220px; }
-
-    /* ── Buttons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 7px 14px;
-      border: 1px solid transparent;
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 13px;
-      font-family: var(--font-ui);
-      font-weight: 600;
-      text-decoration: none;
-      transition: background 0.12s, box-shadow 0.12s, transform 0.1s, border-color 0.12s;
-      white-space: nowrap;
-    }
-    .btn:active:not(:disabled) { transform: translateY(1px); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-      box-shadow: 0 1px 3px rgba(20,102,255,0.30);
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-      box-shadow: 0 2px 8px rgba(20,102,255,0.35);
-    }
-    .btn-secondary {
-      background: var(--surface);
-      color: var(--text-secondary);
-      border-color: var(--border);
-    }
-    .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); border-color: #c5ced9; }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border-color: var(--border);
-    }
-    .btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
-
-    .btn-download {
-      background: var(--surface);
-      color: var(--accent);
-      border-color: var(--border);
-    }
-    .btn-download:hover { background: var(--accent-subtle); border-color: rgba(20,102,255,0.30); }
-
-    .btn-copy {
-      background: var(--surface);
-      color: #6941c6;
-      border-color: var(--border);
-    }
-    .btn-copy:hover:not(:disabled) { background: rgba(105,65,198,0.06); border-color: rgba(105,65,198,0.30); }
-
-    /* ── Feedback ── */
-    .feedback { margin: 0 24px; padding: 0; font-size: 13px; font-weight: 500; }
-    .feedback:not(:empty) {
-      margin: 0 24px 12px;
-      border-radius: var(--radius);
-      padding: 9px 14px;
-      animation: slideDown 0.15s ease;
-    }
-    .feedback.success { background: var(--green-bg);  border: 1px solid var(--green-border);  color: var(--green); }
-    .feedback.error   { background: var(--red-bg);    border: 1px solid var(--red-border);    color: var(--red); }
-    .feedback.info    { background: var(--accent-subtle); border: 1px solid rgba(20,102,255,0.20); color: var(--accent); }
-    .feedback.warning { background: var(--yellow-bg); border: 1px solid var(--yellow-border); color: var(--yellow); }
-
-    /* ── Table container ── */
-    .table-wrap { padding: 0 24px 24px; }
-    .table-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(15,28,46,0.06);
-    }
-
-    /* ── Table ── */
-    table { width: 100%; border-collapse: collapse; }
-    thead tr { background: var(--bg); }
-    th {
-      text-align: left;
-      padding: 10px 14px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.9px;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    td {
-      padding: 11px 14px;
-      border-bottom: 1px solid var(--border-subtle);
-      vertical-align: middle;
-      color: var(--text-primary);
-      font-size: 13px;
-    }
-    tr:last-child td { border-bottom: none; }
-    tr.ingress-row { transition: background 0.1s; }
-    tr.ingress-row:hover td { background: #f7f9fc; cursor: pointer; }
-    tr.ingress-row:hover td:first-child { border-left: 2px solid var(--accent); padding-left: 12px; }
-    tr.ingress-row.selected-row > td { background: var(--surface-selected); }
-    tr.ingress-row.selected-row > td:first-child { border-left: 2px solid var(--accent); padding-left: 12px; }
-
-    input[type="checkbox"] { accent-color: var(--accent); }
-
-    /* ── Badges ── */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 9px;
-      border-radius: 99px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      border: 1px solid transparent;
-      white-space: nowrap;
-    }
-    .badge::before {
-      content: '';
-      display: inline-block;
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-      margin-right: 6px;
-      flex-shrink: 0;
-    }
-    .badge.green  { background: var(--green-bg);  color: var(--green);  border-color: var(--green-border); }
-    .badge.yellow { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow-border); }
-    .badge.red    { background: var(--red-bg);    color: var(--red);    border-color: var(--red-border); }
-
-    /* ── Action chip ── */
-    .action-chip {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      background: var(--yellow-bg);
-      color: var(--yellow);
-      border: 1px solid var(--yellow-border);
-      border-radius: 99px;
-      padding: 2px 8px;
-      cursor: help;
-      letter-spacing: 0.3px;
-    }
-
-    /* ── Detail row ── */
-    tr.detail-row td { padding: 0; background: #f8faff; border-bottom: 1px solid var(--border); }
-    .detail-content {
-      padding: 18px 24px;
-      border-top: 2px solid var(--accent);
-      animation: slideDown 0.15s ease;
-    }
-    .detail-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px;
-      align-items: start;
-      margin-bottom: 14px;
-    }
-    .detail-col h4 {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-    .detail-col ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-    .detail-col ul li {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 3px 10px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-    .detail-col ul li.warning-note { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-bg); }
-    .detail-col ul li.error-note   { border-color: var(--red-border);    color: var(--red);    background: var(--red-bg); }
-    .detail-col ul li code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
-    .detail-col ul li .resource-type {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-right: 4px;
-    }
-    .detail-col ul li.empty-col { color: var(--text-muted); border-color: transparent; background: transparent; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-
-    /* ── Empty / loading ── */
-    .empty-state {
-      text-align: center;
-      padding: 56px 24px;
-      color: var(--text-muted);
-    }
-    .empty-state strong { color: var(--text-secondary); display: block; margin-bottom: 6px; }
-    .empty-state p { font-size: 13px; }
-    .loading {
-      text-align: center;
-      padding: 48px;
-      color: var(--text-muted);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      letter-spacing: 0.5px;
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-
-    /* ── Modal ─────────────────────────────────────────────────────────── */
-    @keyframes modalIn {
-      from { opacity: 0; transform: translateY(-10px) scale(0.97); }
-      to   { opacity: 1; transform: translateY(0)     scale(1); }
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(9,20,38,0.55);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 24px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.18s ease;
-    }
-    .modal-backdrop.open {
-      opacity: 1;
-      pointer-events: all;
-    }
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 20px 60px rgba(9,20,38,0.20), 0 4px 16px rgba(9,20,38,0.10);
-      width: 100%;
-      max-width: 440px;
-      animation: modalIn 0.2s ease both;
-    }
-    .modal-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 20px 20px 0;
-    }
-    .modal-icon {
-      flex-shrink: 0;
-      width: 38px; height: 38px;
-      border-radius: 8px;
-      background: var(--yellow-bg);
-      border: 1px solid var(--yellow-border);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .modal-icon svg { color: var(--yellow); }
-    .modal-header-text { flex: 1; padding-top: 2px; }
-    .modal-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-    .modal-subtitle {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 3px;
-      line-height: 1.5;
-    }
-    .modal-body {
-      padding: 14px 20px;
-    }
-    .modal-notes {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .modal-notes li {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      background: var(--yellow-bg);
-      border: 1px solid var(--yellow-border);
-      border-radius: var(--radius);
-      padding: 7px 10px;
-      line-height: 1.4;
-    }
-    .modal-notes li::before {
-      content: '';
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: var(--yellow);
-      flex-shrink: 0;
-      margin-top: 4px;
-    }
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 12px 20px 16px;
-      border-top: 1px solid var(--border-subtle);
-    }
+    [x-cloak] { display: none !important; }
+    /* Table row hover — complex :hover td selectors Tailwind CDN can't express */
+    .ing-tbody > tr:first-child > td { cursor: pointer; }
+    .ing-tbody:hover > tr:first-child > td { background: #f7f9fc; }
+    .ing-tbody:hover > tr:first-child > td:first-child { border-left: 2px solid #1466ff; padding-left: 12px; }
+    .ing-tbody.is-expanded > tr:first-child > td { background: rgba(20,102,255,0.04); }
+    .ing-tbody.is-expanded > tr:first-child > td:first-child { border-left: 2px solid #1466ff; padding-left: 12px; }
+    input[type="checkbox"] { accent-color: #1466ff; }
   </style>
 </head>
-<body>
+
+<body class="font-ui bg-[#f5f7fa] text-text-primary text-sm flex min-h-screen animate-fade-in"
+      x-data="dashboard()" x-cloak>
 
 <!-- ════════ SIDEBAR ════════ -->
-<aside class="sidebar">
-  <a class="sidebar-logo" href="#">
-    <svg data-v-39eaee16="" aria-hidden="true" fill="none" height="26" width="29" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="m9.144 21.802.693-.894h5.126l2.672 3.415-.475 1.159h-6.61l.158-1.159-1.564-2.52Z" fill="#169FCC" fill-rule="evenodd"></path><path clip-rule="evenodd" d="m10.711 10.158 2.476-4.278h2.884L29 20.903l-1.003 4.579h-5.543l.347-1.286-12.09-14.038Z" fill="#14B59A" fill-rule="evenodd"></path><path clip-rule="evenodd" d="m13.717 5.068 1.185-2.193L18.457 0l6.093 4.778-.79.807 1.06 1.468v1.572l-3.036 2.482-5.094-6.04h-2.973Z" fill="#1BC263" fill-rule="evenodd"></path><path clip-rule="evenodd" d="M4.301 14.621h1.61l4.2-3.514 5.565 6.469-1.57 2.356H8.97l-3.547 4.512-.815 1.038H0v-5.53l4.301-5.33Z" fill="#16BDCC" fill-rule="evenodd"></path></svg>
-    <span class="sidebar-wordmark">NGINX → Kong Migrator</span>
+<aside class="w-[220px] min-h-screen bg-sidebar-bg border-r border-sidebar-border flex flex-col flex-shrink-0 fixed top-0 left-0 h-full z-[200]">
+  <a class="flex items-center gap-[9px] px-4 py-[18px] pb-4 border-b border-sidebar-border no-underline" href="#">
+    <svg aria-hidden="true" fill="none" height="26" width="29" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
+      <path clip-rule="evenodd" d="m9.144 21.802.693-.894h5.126l2.672 3.415-.475 1.159h-6.61l.158-1.159-1.564-2.52Z" fill="#169FCC" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="m10.711 10.158 2.476-4.278h2.884L29 20.903l-1.003 4.579h-5.543l.347-1.286-12.09-14.038Z" fill="#14B59A" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="m13.717 5.068 1.185-2.193L18.457 0l6.093 4.778-.79.807 1.06 1.468v1.572l-3.036 2.482-5.094-6.04h-2.973Z" fill="#1BC263" fill-rule="evenodd"></path>
+      <path clip-rule="evenodd" d="M4.301 14.621h1.61l4.2-3.514 5.565 6.469-1.57 2.356H8.97l-3.547 4.512-.815 1.038H0v-5.53l4.301-5.33Z" fill="#16BDCC" fill-rule="evenodd"></path>
+    </svg>
+    <span class="text-[13px] font-extrabold tracking-[1.5px] text-white uppercase">NGINX → Kong Migrator</span>
   </a>
 
-  <div class="sidebar-section">
-    <div class="sidebar-section-label">Migration</div>
-    <a class="sidebar-item active" href="#">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <div class="pt-5 pb-1">
+    <div class="text-[10px] font-bold tracking-[1px] uppercase text-sidebar-section px-4 pb-1.5">Migration</div>
+    <a class="flex items-center gap-[10px] px-4 py-2 text-[13px] font-semibold text-white bg-sidebar-active-bg border-l-2 border-accent cursor-pointer no-underline select-none" href="#">
+      <svg class="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
         <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
       </svg>
@@ -645,69 +105,84 @@
     </a>
   </div>
 
-  <div class="sidebar-footer">
-    <span>NGINX → Kong Migrator</span>
+  <div class="mt-auto px-4 py-4 border-t border-sidebar-border text-xs text-sidebar-section">
+    <span class="block mb-0.5 text-sidebar-text font-medium">NGINX → Kong Migrator</span>
     v0.1.0
   </div>
 </aside>
 
 <!-- ════════ MAIN ════════ -->
-<div class="main">
+<div class="ml-[220px] flex-1 flex flex-col min-h-screen">
 
   <!-- Page header -->
-  <div class="page-header">
-    <div class="page-header-left">
-      <div class="page-breadcrumb">
-        Migration <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-        <span>Dashboard</span>
+  <div class="flex items-center justify-between px-6 pt-5">
+    <div class="flex flex-col gap-1">
+      <div class="text-xs text-text-muted flex items-center gap-1.5">
+        Migration
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="text-accent font-medium">Dashboard</span>
       </div>
-      <h1 class="page-title">Ingress Migration</h1>
+      <h1 class="text-[20px] font-bold text-text-primary tracking-[-0.3px]">Ingress Migration</h1>
     </div>
   </div>
 
   <!-- Summary pills -->
-  <div class="summary-strip">
-    <div class="summary-pill green">
-      <div class="pill-dot"></div>
-      <span class="pill-count" id="greenCount">—</span>
+  <div class="flex items-center gap-2 px-6 pt-4">
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-green-bg border-status-green-border text-status-green cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-green flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryGreen"></span>
       Migrated
     </div>
-    <div class="summary-pill yellow">
-      <div class="pill-dot"></div>
-      <span class="pill-count" id="yellowCount">—</span>
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-yellow-bg border-status-yellow-border text-status-yellow cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-yellow flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryYellow"></span>
       Ready to Migrate
     </div>
-    <div class="summary-pill red">
-      <div class="pill-dot"></div>
-      <span class="pill-count" id="redCount">—</span>
+    <div class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold border bg-status-red-bg border-status-red-border text-status-red cursor-default">
+      <div class="w-1.5 h-1.5 rounded-full bg-status-red flex-shrink-0"></div>
+      <span class="font-mono font-bold" x-text="summaryRed"></span>
       Manual Action Required
     </div>
   </div>
 
   <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="toolbar-config">
-      <label>Ingress class
-        <input type="text" id="ingressClass" class="input-base" value="kong" placeholder="kong">
+  <div class="flex items-center gap-2 px-6 py-3.5 flex-wrap">
+    <div class="flex items-center gap-2">
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-text-secondary whitespace-nowrap">
+        Ingress class
+        <input type="text" x-model="ingressClass"
+               class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[12px] font-mono bg-white text-text-primary outline-none w-[120px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+               placeholder="kong">
       </label>
-      <label>Target namespace
-        <input type="text" id="targetNamespace" class="input-base" placeholder="e.g. kong-prod">
+      <label class="flex items-center gap-1.5 text-xs font-semibold text-text-secondary whitespace-nowrap">
+        Target namespace
+        <input type="text" x-model="targetNamespace"
+               class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none w-[160px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+               placeholder="e.g. kong-prod">
       </label>
     </div>
-    <div class="toolbar-divider"></div>
-    <button class="btn btn-primary" id="migrateSelectedBtn" onclick="migrateSelected()">
+    <div class="w-px h-[22px] bg-border-ui mx-1 flex-shrink-0"></div>
+    <button @click="migrateSelected()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       Migrate Selected
     </button>
-    <button class="btn btn-copy" id="copySelectedBtn" onclick="copySelectedToNs()">Copy to Namespace</button>
-    <button class="btn btn-ghost" onclick="loadIngresses()">
+    <button @click="copySelectedToNs()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+      Copy to Namespace
+    </button>
+    <button @click="loadIngresses()"
+            class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-transparent text-text-secondary font-semibold text-[13px] hover:bg-[#f9fafb] hover:text-text-primary active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
       Refresh
     </button>
-    <div class="spacer"></div>
-    <div class="filter-row">
-      <input type="text" id="filterText" class="input-base" placeholder="Filter by name / namespace…" oninput="applyFilter()">
-      <select id="filterStatus" class="input-base" onchange="applyFilter()">
+    <div class="flex-1"></div>
+    <div class="flex gap-2 items-center">
+      <input type="text" x-model="filterText"
+             class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none w-[220px] transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)] placeholder:text-text-muted"
+             placeholder="Filter by name / namespace…">
+      <select x-model="filterStatus"
+              class="px-2.5 py-1.5 border border-border-ui rounded-[6px] text-[13px] font-ui bg-white text-text-primary outline-none transition-[border-color,box-shadow] duration-150 focus:border-accent focus:shadow-[0_0_0_3px_rgba(20,102,255,0.08)]">
         <option value="">All statuses</option>
         <option value="0">Migrated</option>
         <option value="1">Ready</option>
@@ -716,26 +191,210 @@
     </div>
   </div>
 
-  <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+  <!-- Feedback toast -->
+  <div x-show="feedback.visible"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 -translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0"
+       :class="{
+         'bg-status-green-bg border-status-green-border text-status-green': feedback.type === 'success',
+         'bg-status-red-bg border-status-red-border text-status-red': feedback.type === 'error',
+         'bg-accent-subtle border-[rgba(20,102,255,0.20)] text-accent': feedback.type === 'info',
+         'bg-status-yellow-bg border-status-yellow-border text-status-yellow': feedback.type === 'warning',
+       }"
+       x-text="feedback.message"
+       class="mx-6 mb-3 px-3.5 py-2 rounded-[6px] border text-[13px] font-medium"
+       role="status" aria-live="polite">
+  </div>
 
   <!-- Table -->
-  <div class="table-wrap">
-    <div class="table-card">
-      <table id="mainTable">
+  <div class="px-6 pb-6">
+    <div class="bg-white border border-border-ui rounded-[8px] overflow-hidden shadow-[0_1px_4px_rgba(15,28,46,0.06)]">
+      <table class="w-full border-collapse">
         <thead>
-          <tr>
-            <th style="width:36px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" title="Select all eligible"></th>
-            <th>Name</th>
-            <th>Namespace</th>
-            <th>Hosts</th>
-            <th>Status</th>
-            <th>NGINX Annotations</th>
-            <th>Actions Required</th>
+          <tr class="bg-[#f5f7fa]">
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap w-9">
+              <input type="checkbox"
+                     :checked="allEligibleSelected"
+                     :indeterminate.prop="someEligibleSelected"
+                     @change="toggleSelectAll()"
+                     title="Select all eligible">
+            </th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Name</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Namespace</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Hosts</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Status</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">NGINX Annotations</th>
+            <th class="text-left px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-text-muted border-b border-border-ui whitespace-nowrap">Actions Required</th>
           </tr>
         </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="7" class="loading">Loading ingresses…</td></tr>
+
+        <!-- Loading state -->
+        <tbody x-show="loading">
+          <tr>
+            <td colspan="7" class="text-center py-12 text-text-muted font-mono text-xs tracking-[0.5px] animate-pulse-opacity">
+              Loading ingresses…
+            </td>
+          </tr>
         </tbody>
+
+        <!-- Empty state -->
+        <tbody x-show="!loading && filteredIngresses.length === 0">
+          <tr>
+            <td colspan="7" class="text-center py-14 text-text-muted">
+              <strong class="text-text-secondary block mb-1.5 font-semibold">No ingresses found</strong>
+              <p class="text-[13px]">Try adjusting the filter or check your kubeconfig.</p>
+            </td>
+          </tr>
+        </tbody>
+
+        <!-- One <tbody> per ingress row -->
+        <template x-for="ing in filteredIngresses" :key="ing.namespace + '/' + ing.name">
+          <tbody class="ing-tbody" :class="{ 'is-expanded': isExpanded(ing) }">
+            <!-- Main row -->
+            <tr @click="toggleDetail(ing)">
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle" @click.stop>
+                <input type="checkbox"
+                       :disabled="ing.status !== 1"
+                       :checked="isSelected(ing)"
+                       @change="toggleRow(ing)">
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <strong class="font-semibold" x-text="ing.name"></strong>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] text-text-secondary" x-text="ing.namespace"></td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] font-mono text-[12px]">
+                <span x-show="ing.hosts && ing.hosts.length > 0" x-text="(ing.hosts || []).join(', ')"></span>
+                <span x-show="!ing.hosts || ing.hosts.length === 0" class="text-text-muted">—</span>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <span class="inline-flex items-center px-[9px] py-[3px] rounded-full font-mono text-[11px] font-semibold tracking-[0.2px] border whitespace-nowrap"
+                      :class="{
+                        'bg-status-green-bg border-status-green-border text-status-green': ing.status === 0,
+                        'bg-status-yellow-bg border-status-yellow-border text-status-yellow': ing.status === 1,
+                        'bg-status-red-bg border-status-red-border text-status-red': ing.status === 2
+                      }">
+                  <span class="inline-block w-[5px] h-[5px] rounded-full bg-current mr-1.5 flex-shrink-0"></span>
+                  <span x-text="statusLabel(ing.status)"></span>
+                </span>
+              </td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px] font-mono text-[12px] text-text-secondary" x-text="ing.annotationCount || 0"></td>
+              <td class="px-3.5 py-[11px] border-b border-border-subtle align-middle text-[13px]">
+                <template x-if="ing.actionNotes && ing.actionNotes.length > 0">
+                  <span class="font-mono text-[10px] font-semibold bg-status-yellow-bg text-status-yellow border border-status-yellow-border rounded-full px-2 py-[2px] cursor-help tracking-[0.3px]"
+                        title="Manual steps required after migration">Action needed</span>
+                </template>
+                <template x-if="!ing.actionNotes || ing.actionNotes.length === 0">
+                  <span class="text-text-muted">—</span>
+                </template>
+              </td>
+            </tr>
+
+            <!-- Detail row -->
+            <tr x-show="isExpanded(ing)"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1">
+              <td colspan="7" class="p-0 bg-[#f8faff] border-b border-border-ui">
+                <div class="px-6 py-[18px] border-t-2 border-accent">
+                  <!-- 3-column grid -->
+                  <div class="grid grid-cols-3 gap-4 mb-3.5 items-start">
+
+                    <!-- Col 1: Action Required -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Action Required</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="!ing.actionNotes || ing.actionNotes.length === 0">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="note in (ing.actionNotes || [])" :key="note">
+                          <li class="bg-status-yellow-bg border border-status-yellow-border text-status-yellow rounded-[6px] px-2.5 py-1 text-[12px]" x-text="note"></li>
+                        </template>
+                      </ul>
+                    </div>
+
+                    <!-- Col 2: Unmigrated Annotations -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Unmigrated Annotations</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="!ing.unmigratedKeys || ing.unmigratedKeys.length === 0">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="key in (ing.unmigratedKeys || [])" :key="key">
+                          <li class="bg-status-red-bg border border-status-red-border text-status-red rounded-[6px] px-2.5 py-1 text-[12px]">
+                            <code class="font-mono text-[11px] text-accent" x-text="key"></code>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+
+                    <!-- Col 3: Generated Kong Resources -->
+                    <div>
+                      <h4 class="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-text-muted mb-2">Generated Kong Resources</h4>
+                      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+                        <template x-if="(!ing.generatedPlugins || ing.generatedPlugins.length === 0) && (!ing.generatedUpstreamPolicies || ing.generatedUpstreamPolicies.length === 0)">
+                          <li class="text-text-muted text-[12px]">—</li>
+                        </template>
+                        <template x-for="p in (ing.generatedPlugins || [])" :key="'plugin-' + p">
+                          <li class="bg-white border border-border-ui rounded-[6px] px-2.5 py-[3px] text-[12px] text-text-secondary">
+                            <span class="font-mono text-[10px] text-text-muted mr-1">KongPlugin ·</span><code class="font-mono text-[11px] text-accent" x-text="p"></code>
+                          </li>
+                        </template>
+                        <template x-for="p in (ing.generatedUpstreamPolicies || [])" :key="'upstream-' + p">
+                          <li class="bg-white border border-border-ui rounded-[6px] px-2.5 py-[3px] text-[12px] text-text-secondary">
+                            <span class="font-mono text-[10px] text-text-muted mr-1">KongUpstreamPolicy ·</span><code class="font-mono text-[11px] text-accent" x-text="p"></code>
+                          </li>
+                        </template>
+                      </ul>
+                    </div>
+
+                  </div><!-- /grid -->
+
+                  <!-- Action buttons -->
+                  <div class="flex flex-wrap gap-2 mt-2.5">
+                    <a :href="`/api/ingress/${ing.namespace}/${ing.name}/download?format=kong-ingress`"
+                       download
+                       class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
+                      ↓ Kong Ingress YAML
+                    </a>
+                    <a :href="`/api/ingress/${ing.namespace}/${ing.name}/download?format=gateway-api`"
+                       download
+                       class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-accent font-semibold text-[13px] no-underline hover:bg-accent-subtle hover:border-[rgba(20,102,255,0.30)] active:translate-y-px transition-all duration-100 whitespace-nowrap">
+                      ↓ Gateway API YAML
+                    </a>
+                    <template x-if="ing.status === 1">
+                      <button @click.stop="migrateSingle(ing.namespace, ing.name)"
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+                        ⬆ Migrate to Kong
+                      </button>
+                    </template>
+                    <template x-if="ing.status !== 1">
+                      <button disabled
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] opacity-40 cursor-not-allowed whitespace-nowrap"
+                              title="Cannot auto-migrate">
+                        ⬆ Migrate (blocked)
+                      </button>
+                    </template>
+                    <template x-if="ing.status === 1">
+                      <button @click.stop="copyToNsSingle(ing.namespace, ing.name)"
+                              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-copy-purple font-semibold text-[13px] hover:bg-[rgba(105,65,198,0.06)] hover:border-[rgba(105,65,198,0.30)] active:translate-y-px transition-all duration-100 cursor-pointer whitespace-nowrap">
+                        Copy to Namespace
+                      </button>
+                    </template>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </template>
+
       </table>
     </div>
   </div>
@@ -743,364 +402,304 @@
 </div><!-- /.main -->
 
 <!-- ════════ CONFIRM MODAL ════════ -->
-<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<div x-show="modal.open"
+     x-transition:enter="transition ease-out duration-[180ms]"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @keydown.escape.window="modalCancel()"
+     @click.self="modalCancel()"
+     class="fixed inset-0 bg-[rgba(9,20,38,0.55)] backdrop-blur-sm flex items-center justify-center z-[1000] p-6"
+     role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="bg-white rounded-[10px] border border-border-ui shadow-2xl w-full max-w-[440px] animate-modal-in">
+    <div class="flex items-start gap-3.5 p-5 pb-0">
+      <div class="flex-shrink-0 w-[38px] h-[38px] rounded-[8px] bg-status-yellow-bg border border-status-yellow-border flex items-center justify-center">
+        <svg class="text-status-yellow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </div>
-      <div class="modal-header-text">
-        <div class="modal-title" id="modalTitle">Manual Steps Required</div>
-        <div class="modal-subtitle">These ingresses need manual configuration after migration. Review the items below before proceeding.</div>
+      <div class="flex-1 pt-0.5">
+        <div class="text-[15px] font-bold text-text-primary leading-[1.3]" id="modalTitle">Manual Steps Required</div>
+        <div class="text-[13px] text-text-secondary mt-[3px] leading-[1.5]">These ingresses need manual configuration after migration. Review the items below before proceeding.</div>
       </div>
     </div>
-    <div class="modal-body">
-      <ul class="modal-notes" id="modalNotes"></ul>
+    <div class="px-5 py-3.5">
+      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+        <template x-for="note in modal.notes" :key="note">
+          <li class="flex items-baseline gap-2 text-[13px] text-text-secondary bg-status-yellow-bg border border-status-yellow-border rounded-[6px] px-2.5 py-[7px] leading-[1.4]">
+            <span class="inline-block w-[5px] h-[5px] rounded-full bg-status-yellow flex-shrink-0 mt-1 self-start"></span>
+            <span x-text="note"></span>
+          </li>
+        </template>
+      </ul>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="modalCancel">Cancel</button>
-      <button class="btn btn-primary" id="modalProceed">Proceed Anyway</button>
+    <div class="flex justify-end gap-2 px-5 py-3 pb-4 border-t border-border-subtle">
+      <button @click="modalCancel()"
+              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-border-ui rounded-[6px] bg-white text-text-secondary font-semibold text-[13px] hover:bg-[#f9fafb] hover:text-text-primary hover:border-[#c5ced9] active:translate-y-px transition-all duration-100 cursor-pointer">
+        Cancel
+      </button>
+      <button @click="modalProceed()"
+              class="inline-flex items-center gap-[5px] px-3.5 py-[7px] border border-accent rounded-[6px] bg-accent text-white font-semibold text-[13px] shadow-[0_1px_3px_rgba(20,102,255,0.30)] hover:bg-accent-hover hover:border-accent-hover hover:shadow-[0_2px_8px_rgba(20,102,255,0.35)] active:translate-y-px transition-all duration-100 cursor-pointer">
+        Proceed Anyway
+      </button>
     </div>
   </div>
 </div>
 
 <script>
-  'use strict';
+  function dashboard() {
+    return {
+      // ── Data ──────────────────────────────────────────────────────────────
+      allIngresses: [],
 
-  let allIngresses = [];
-  let visibleIngresses = [];
+      // ── Filter state (x-model) ────────────────────────────────────────────
+      filterText: '',
+      filterStatus: '',
 
-  // ── Data loading ──────────────────────────────────────────────────────────
+      // ── Config inputs (x-model) ───────────────────────────────────────────
+      ingressClass: 'kong',
+      targetNamespace: '',
 
-  async function loadIngresses() {
-    document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" class="loading">Loading ingresses…</td></tr>';
-    clearFeedback();
-    try {
-      const resp = await fetch('/api/ingresses');
-      if (!resp.ok) throw new Error(await resp.text());
-      const data = await resp.json();
-      allIngresses = data || [];
-      applyFilter();
-      updateSummary(allIngresses);
-    } catch (e) {
-      showFeedback('Failed to load ingresses: ' + e.message, 'error');
-      document.getElementById('tableBody').innerHTML =
-        '<tr><td colspan="7" class="empty-state"><strong>Error loading data</strong><p>' + escHtml(e.message) + '</p></td></tr>';
-    }
+      // ── UI state ──────────────────────────────────────────────────────────
+      loading: true,
+      expandedRow: null,   // "namespace/name" key
+
+      // ── Selection (plain object — JS Set is opaque to Alpine proxy) ───────
+      selectedRows: {},
+
+      // ── Feedback toast ────────────────────────────────────────────────────
+      feedback: { visible: false, message: '', type: '', _timer: null },
+
+      // ── Confirmation modal ────────────────────────────────────────────────
+      modal: { open: false, notes: [], resolve: null },
+
+      // ── Computed getters ──────────────────────────────────────────────────
+
+      get filteredIngresses() {
+        const text   = this.filterText.toLowerCase();
+        const status = this.filterStatus;
+        return this.allIngresses.filter(ing => {
+          const matchText   = !text || ing.name.toLowerCase().includes(text) || ing.namespace.toLowerCase().includes(text);
+          const matchStatus = status === '' || String(ing.status) === status;
+          return matchText && matchStatus;
+        });
+      },
+
+      get summaryGreen()  { return this.allIngresses.filter(i => i.status === 0).length; },
+      get summaryYellow() { return this.allIngresses.filter(i => i.status === 1).length; },
+      get summaryRed()    { return this.allIngresses.filter(i => i.status === 2).length; },
+
+      get allEligibleSelected() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        if (eligible.length === 0) return false;
+        return eligible.every(i => !!this.selectedRows[i.namespace + '/' + i.name]);
+      },
+
+      get someEligibleSelected() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        if (eligible.length === 0) return false;
+        const sel = eligible.filter(i => !!this.selectedRows[i.namespace + '/' + i.name]).length;
+        return sel > 0 && sel < eligible.length;
+      },
+
+      get selectedCount() { return Object.keys(this.selectedRows).length; },
+
+      // ── Init ──────────────────────────────────────────────────────────────
+      async init() { await this.loadIngresses(); },
+
+      // ── Data loading ──────────────────────────────────────────────────────
+      async loadIngresses() {
+        this.loading = true;
+        this.selectedRows = {};
+        this.expandedRow  = null;
+        this.clearFeedback();
+        try {
+          const resp = await fetch('/api/ingresses');
+          if (!resp.ok) throw new Error(await resp.text());
+          const data = await resp.json();
+          this.allIngresses = data || [];
+        } catch (e) {
+          this.showFeedback('Failed to load ingresses: ' + e.message, 'error');
+          this.allIngresses = [];
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // ── Row expand/collapse ───────────────────────────────────────────────
+      toggleDetail(ing) {
+        const key = ing.namespace + '/' + ing.name;
+        this.expandedRow = this.expandedRow === key ? null : key;
+      },
+
+      isExpanded(ing) {
+        return this.expandedRow === (ing.namespace + '/' + ing.name);
+      },
+
+      // ── Row selection ─────────────────────────────────────────────────────
+      isSelected(ing) {
+        return !!this.selectedRows[ing.namespace + '/' + ing.name];
+      },
+
+      toggleRow(ing) {
+        const key  = ing.namespace + '/' + ing.name;
+        const copy = { ...this.selectedRows };
+        if (copy[key]) { delete copy[key]; } else { copy[key] = true; }
+        this.selectedRows = copy;
+      },
+
+      toggleSelectAll() {
+        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        const copy     = { ...this.selectedRows };
+        if (this.allEligibleSelected) {
+          eligible.forEach(i => delete copy[i.namespace + '/' + i.name]);
+        } else {
+          eligible.forEach(i => { copy[i.namespace + '/' + i.name] = true; });
+        }
+        this.selectedRows = copy;
+      },
+
+      // ── Modal ─────────────────────────────────────────────────────────────
+      showModal(notes) {
+        return new Promise(resolve => {
+          this.modal = { open: true, notes, resolve };
+        });
+      },
+
+      modalProceed() {
+        const resolve = this.modal.resolve;
+        this.modal = { open: false, notes: [], resolve: null };
+        if (resolve) resolve(true);
+      },
+
+      modalCancel() {
+        const resolve = this.modal.resolve;
+        this.modal = { open: false, notes: [], resolve: null };
+        if (resolve) resolve(false);
+      },
+
+      // ── Migration helpers ─────────────────────────────────────────────────
+      async confirmMigration(ingresses) {
+        const notes = new Set();
+        for (const ref of ingresses) {
+          const ing = this.allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
+          if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
+        }
+        if (notes.size === 0) return true;
+        return this.showModal([...notes]);
+      },
+
+      _parseSelected() {
+        return Object.keys(this.selectedRows).map(key => {
+          const idx = key.indexOf('/');
+          return { namespace: key.substring(0, idx), name: key.substring(idx + 1) };
+        });
+      },
+
+      // ── Migrate ───────────────────────────────────────────────────────────
+      async migrateSingle(ns, name) {
+        if (!(await this.confirmMigration([{ namespace: ns, name }]))) return;
+        this.showFeedback(`Migrating ${ns}/${name}…`, 'info');
+        try {
+          const resp = await fetch('/api/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses: [{ namespace: ns, name }], ingressClass: this.ingressClass || 'kong' })
+          });
+          const results = await resp.json();
+          const r = results[0];
+          if (r.success) { this.showFeedback(`✓ Successfully migrated ${ns}/${name}`, 'success'); }
+          else { this.showFeedback(`✗ Migration failed for ${ns}/${name}: ${r.error}`, 'error'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      async migrateSelected() {
+        const ingresses = this._parseSelected();
+        if (ingresses.length === 0) { this.showFeedback('No ingresses selected.', 'info'); return; }
+        if (!(await this.confirmMigration(ingresses))) return;
+        this.showFeedback(`Migrating ${ingresses.length} ingress(es)…`, 'info');
+        try {
+          const resp = await fetch('/api/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses, ingressClass: this.ingressClass || 'kong' })
+          });
+          const results = await resp.json();
+          const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
+          let msg = `✓ Migrated ${ok.length}/${results.length} ingress(es)`;
+          if (fail.length > 0) {
+            msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+            this.showFeedback(msg, 'warning');
+          } else { this.showFeedback(msg, 'success'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      // ── Copy to Namespace ─────────────────────────────────────────────────
+      async copyToNsSingle(ns, name) {
+        const targetNamespace = this.targetNamespace.trim();
+        if (!targetNamespace) { this.showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
+        if (!(await this.confirmMigration([{ namespace: ns, name }]))) return;
+        this.showFeedback(`Copying ${ns}/${name} to namespace "${targetNamespace}"…`, 'info');
+        try {
+          const resp = await fetch('/api/copy-to-namespace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses: [{ namespace: ns, name }], ingressClass: this.ingressClass || 'kong', targetNamespace })
+          });
+          const results = await resp.json();
+          const r = results[0];
+          if (r.success) { this.showFeedback(`✓ Copied ${ns}/${name} to namespace "${targetNamespace}"`, 'success'); }
+          else { this.showFeedback(`✗ Copy failed for ${ns}/${name}: ${r.error}`, 'error'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      async copySelectedToNs() {
+        const targetNamespace = this.targetNamespace.trim();
+        if (!targetNamespace) { this.showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
+        const ingresses = this._parseSelected();
+        if (ingresses.length === 0) { this.showFeedback('No ingresses selected.', 'info'); return; }
+        if (!(await this.confirmMigration(ingresses))) return;
+        this.showFeedback(`Copying ${ingresses.length} ingress(es) to namespace "${targetNamespace}"…`, 'info');
+        try {
+          const resp = await fetch('/api/copy-to-namespace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingresses, ingressClass: this.ingressClass || 'kong', targetNamespace })
+          });
+          const results = await resp.json();
+          const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
+          let msg = `✓ Copied ${ok.length}/${results.length} ingress(es) to "${targetNamespace}"`;
+          if (fail.length > 0) {
+            msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`;
+            this.showFeedback(msg, 'warning');
+          } else { this.showFeedback(msg, 'success'); }
+          await this.loadIngresses();
+        } catch (e) { this.showFeedback('Request error: ' + e.message, 'error'); }
+      },
+
+      // ── Feedback ──────────────────────────────────────────────────────────
+      showFeedback(msg, type) {
+        if (this.feedback._timer) clearTimeout(this.feedback._timer);
+        const timer = setTimeout(() => { this.feedback = { ...this.feedback, visible: false }; }, 8000);
+        this.feedback = { visible: true, message: msg, type: type || '', _timer: timer };
+      },
+
+      clearFeedback() {
+        if (this.feedback._timer) clearTimeout(this.feedback._timer);
+        this.feedback = { visible: false, message: '', type: '', _timer: null };
+      },
+
+      // ── Helpers ───────────────────────────────────────────────────────────
+      statusLabel(s) { return ['Migrated', 'Ready', 'Manual'][s] ?? 'Manual'; },
+    };
   }
-
-  // ── Summary ───────────────────────────────────────────────────────────────
-
-  function updateSummary(data) {
-    document.getElementById('greenCount').textContent  = data.filter(i => i.status === 0).length;
-    document.getElementById('yellowCount').textContent = data.filter(i => i.status === 1).length;
-    document.getElementById('redCount').textContent    = data.filter(i => i.status === 2).length;
-  }
-
-  // ── Filter ────────────────────────────────────────────────────────────────
-
-  function applyFilter() {
-    const text   = document.getElementById('filterText').value.toLowerCase();
-    const status = document.getElementById('filterStatus').value;
-    visibleIngresses = allIngresses.filter(ing => {
-      const matchText   = !text || ing.name.toLowerCase().includes(text) || ing.namespace.toLowerCase().includes(text);
-      const matchStatus = status === '' || String(ing.status) === status;
-      return matchText && matchStatus;
-    });
-    renderTable(visibleIngresses);
-  }
-
-  // ── Rendering ─────────────────────────────────────────────────────────────
-
-  function statusClass(s) { return ['green', 'yellow', 'red'][s] ?? 'red'; }
-  function statusLabel(s) { return ['Migrated', 'Ready', 'Manual'][s] ?? 'Manual'; }
-  function statusIcon(s)  { return ''; }
-
-  function renderTable(data) {
-    const tbody = document.getElementById('tableBody');
-    if (!data || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><strong>No ingresses found</strong><p>Try adjusting the filter or check your kubeconfig.</p></td></tr>';
-      document.getElementById('selectAll').indeterminate = false;
-      document.getElementById('selectAll').checked = false;
-      return;
-    }
-
-    const rows = data.map(ing => {
-      const eligible = ing.status === 1;
-      const sc = statusClass(ing.status);
-      const hosts = (ing.hosts && ing.hosts.length) ? escHtml(ing.hosts.join(', ')) : '<span style="color:var(--text-muted)">—</span>';
-      const checkboxAttrs = eligible
-        ? `class="row-check" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}"`
-        : `class="row-check" disabled title="Cannot migrate: unmigrated annotations remain"`;
-      return `<tr class="ingress-row" data-ns="${escAttr(ing.namespace)}" data-name="${escAttr(ing.name)}" onclick="handleRowClick(event, this)">
-        <td onclick="event.stopPropagation()"><input type="checkbox" ${checkboxAttrs}></td>
-        <td><strong>${escHtml(ing.name)}</strong></td>
-        <td style="color:var(--text-secondary)">${escHtml(ing.namespace)}</td>
-        <td style="font-family:var(--font-mono);font-size:12px">${hosts}</td>
-        <td><span class="badge ${sc}">${statusIcon(ing.status)}${statusLabel(ing.status)}</span></td>
-        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${ing.annotationCount || 0}</td>
-        <td>${ing.actionNotes && ing.actionNotes.length > 0 ? '<span class="action-chip" title="Manual steps required after migration">Action needed</span>' : '<span style="color:var(--text-muted)">—</span>'}</td>
-      </tr>`;
-    });
-
-    tbody.innerHTML = rows.join('');
-    updateSelectAll();
-  }
-
-  function handleRowClick(event, tr) {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'A') return;
-    const ns   = tr.dataset.ns;
-    const name = tr.dataset.name;
-    const ing  = allIngresses.find(i => i.namespace === ns && i.name === name);
-    if (!ing) return;
-    toggleDetail(tr, ing);
-  }
-
-  function toggleDetail(tr, ing) {
-    const next = tr.nextElementSibling;
-    if (next && next.classList.contains('detail-row')) {
-      next.remove();
-      tr.classList.remove('selected-row');
-      return;
-    }
-    document.querySelectorAll('tr.detail-row').forEach(r => r.remove());
-    document.querySelectorAll('tr.ingress-row.selected-row').forEach(r => r.classList.remove('selected-row'));
-    tr.classList.add('selected-row');
-
-    const eligible = ing.status === 1;
-    let content = '';
-
-    const emptyHtml = '<li class="empty-col">—</li>';
-
-    const actionNotesHtml = (ing.actionNotes && ing.actionNotes.length > 0)
-      ? ing.actionNotes.map(n => `<li class="warning-note">${escHtml(n)}</li>`).join('')
-      : null;
-
-    const unmigratedHtml = (ing.unmigratedKeys && ing.unmigratedKeys.length > 0)
-      ? ing.unmigratedKeys.map(k => `<li class="error-note"><code>${escHtml(k)}</code></li>`).join('')
-      : null;
-
-    const pluginItems = (ing.generatedPlugins || []).map(p =>
-      `<li><span class="resource-type">KongPlugin ·</span><code>${escHtml(p)}</code></li>`);
-    const upstreamItems = (ing.generatedUpstreamPolicies || []).map(p =>
-      `<li><span class="resource-type">KongUpstreamPolicy ·</span><code>${escHtml(p)}</code></li>`);
-    const resourcesHtml = pluginItems.length + upstreamItems.length > 0
-      ? [...pluginItems, ...upstreamItems].join('')
-      : null;
-
-    content += `<div class="detail-columns">
-      <div class="detail-col">
-        <h4>Action Required</h4>
-        <ul>${actionNotesHtml || emptyHtml}</ul>
-      </div>
-      <div class="detail-col">
-        <h4>Unmigrated Annotations</h4>
-        <ul>${unmigratedHtml || emptyHtml}</ul>
-      </div>
-      <div class="detail-col">
-        <h4>Generated Kong Resources</h4>
-        <ul>${resourcesHtml || emptyHtml}</ul>
-      </div>
-    </div>`;
-
-    const ns   = escAttr(ing.namespace);
-    const name = escAttr(ing.name);
-    content += `<div class="actions">
-      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=kong-ingress" download>↓ Kong Ingress YAML</a>
-      <a class="btn btn-download" href="/api/ingress/${ns}/${name}/download?format=gateway-api" download>↓ Gateway API YAML</a>
-      ${eligible ? `<button class="btn btn-primary" onclick="migrateSingle('${ns}','${name}')">⬆ Migrate to Kong</button>` : `<button class="btn btn-secondary" disabled title="Cannot auto-migrate">⬆ Migrate (blocked)</button>`}
-      ${eligible ? `<button class="btn btn-copy" onclick="copyToNsSingle('${ns}','${name}')">Copy to Namespace</button>` : ''}
-    </div>`;
-
-    const detailTr = document.createElement('tr');
-    detailTr.className = 'detail-row';
-    detailTr.innerHTML = `<td colspan="7"><div class="detail-content">${content}</div></td>`;
-    tr.insertAdjacentElement('afterend', detailTr);
-  }
-
-  // ── Select all ────────────────────────────────────────────────────────────
-
-  function toggleSelectAll(cb) {
-    document.querySelectorAll('.row-check:not(:disabled)').forEach(c => c.checked = cb.checked);
-  }
-
-  function updateSelectAll() {
-    const all     = document.querySelectorAll('.row-check:not(:disabled)');
-    const checked = document.querySelectorAll('.row-check:not(:disabled):checked');
-    const sa = document.getElementById('selectAll');
-    if (all.length === 0) { sa.indeterminate = false; sa.checked = false; }
-    else if (checked.length === all.length) { sa.indeterminate = false; sa.checked = true; }
-    else if (checked.length === 0) { sa.indeterminate = false; sa.checked = false; }
-    else { sa.indeterminate = true; }
-  }
-
-  document.addEventListener('change', e => {
-    if (e.target.classList.contains('row-check')) updateSelectAll();
-  });
-
-  // ── Modal ─────────────────────────────────────────────────────────────────
-
-  function showModal(notes) {
-    return new Promise(resolve => {
-      const backdrop = document.getElementById('confirmModal');
-      const notesList = document.getElementById('modalNotes');
-
-      notesList.innerHTML = [...notes].map(n => `<li>${escHtml(n)}</li>`).join('');
-      backdrop.classList.add('open');
-
-      function handleProceed() { cleanup(); resolve(true); }
-      function handleCancel()  { cleanup(); resolve(false); }
-      function handleKey(e)    { if (e.key === 'Escape') { cleanup(); resolve(false); } }
-
-      function cleanup() {
-        backdrop.classList.remove('open');
-        document.getElementById('modalProceed').removeEventListener('click', handleProceed);
-        document.getElementById('modalCancel').removeEventListener('click', handleCancel);
-        backdrop.removeEventListener('click', handleBackdropClick);
-        document.removeEventListener('keydown', handleKey);
-      }
-
-      function handleBackdropClick(e) {
-        if (e.target === backdrop) handleCancel();
-      }
-
-      document.getElementById('modalProceed').addEventListener('click', handleProceed);
-      document.getElementById('modalCancel').addEventListener('click', handleCancel);
-      backdrop.addEventListener('click', handleBackdropClick);
-      document.addEventListener('keydown', handleKey);
-    });
-  }
-
-  // ── Migration ─────────────────────────────────────────────────────────────
-
-  async function confirmMigration(ingresses) {
-    const notes = new Set();
-    for (const ref of ingresses) {
-      const ing = allIngresses.find(i => i.namespace === ref.namespace && i.name === ref.name);
-      if (ing && ing.actionNotes) ing.actionNotes.forEach(n => notes.add(n));
-    }
-    if (notes.size === 0) return true;
-    return showModal(notes);
-  }
-
-  async function migrateSingle(ns, name) {
-    if (!(await confirmMigration([{namespace: ns, name: name}]))) return;
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    showFeedback(`Migrating ${ns}/${name}…`, 'info');
-    try {
-      const resp = await fetch('/api/migrate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass})
-      });
-      const results = await resp.json();
-      const r = results[0];
-      if (r.success) { showFeedback(`✓ Successfully migrated ${ns}/${name}`, 'success'); }
-      else { showFeedback(`✗ Migration failed for ${ns}/${name}: ${r.error}`, 'error'); }
-      await loadIngresses();
-    } catch (e) { showFeedback('Request error: ' + e.message, 'error'); }
-  }
-
-  async function migrateSelected() {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
-    if (checked.length === 0) { showFeedback('No ingresses selected.', 'info'); return; }
-    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
-    if (!(await confirmMigration(ingresses))) return;
-    showFeedback(`Migrating ${ingresses.length} ingress(es)…`, 'info');
-    try {
-      const resp = await fetch('/api/migrate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses, ingressClass})
-      });
-      const results = await resp.json();
-      const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
-      let msg = `✓ Migrated ${ok.length}/${results.length} ingress(es)`;
-      if (fail.length > 0) { msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`; showFeedback(msg, 'warning'); }
-      else { showFeedback(msg, 'success'); }
-      await loadIngresses();
-    } catch (e) { showFeedback('Request error: ' + e.message, 'error'); }
-  }
-
-  // ── Copy to Namespace ─────────────────────────────────────────────────────
-
-  async function copyToNsSingle(ns, name) {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const targetNamespace = document.getElementById('targetNamespace').value.trim();
-    if (!targetNamespace) { showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
-    if (!(await confirmMigration([{namespace: ns, name: name}]))) return;
-    showFeedback(`Copying ${ns}/${name} to namespace "${targetNamespace}"…`, 'info');
-    try {
-      const resp = await fetch('/api/copy-to-namespace', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses: [{namespace: ns, name: name}], ingressClass, targetNamespace})
-      });
-      const results = await resp.json();
-      const r = results[0];
-      if (r.success) { showFeedback(`✓ Copied ${ns}/${name} to namespace "${targetNamespace}"`, 'success'); }
-      else { showFeedback(`✗ Copy failed for ${ns}/${name}: ${r.error}`, 'error'); }
-      await loadIngresses();
-    } catch (e) { showFeedback('Request error: ' + e.message, 'error'); }
-  }
-
-  async function copySelectedToNs() {
-    const ingressClass = document.getElementById('ingressClass').value.trim() || 'kong';
-    const targetNamespace = document.getElementById('targetNamespace').value.trim();
-    if (!targetNamespace) { showFeedback('Please fill in the "Target namespace" field.', 'warning'); return; }
-    const checked = Array.from(document.querySelectorAll('.row-check:checked'));
-    if (checked.length === 0) { showFeedback('No ingresses selected.', 'info'); return; }
-    const ingresses = checked.map(cb => ({namespace: cb.dataset.ns, name: cb.dataset.name}));
-    if (!(await confirmMigration(ingresses))) return;
-    showFeedback(`Copying ${ingresses.length} ingress(es) to namespace "${targetNamespace}"…`, 'info');
-    try {
-      const resp = await fetch('/api/copy-to-namespace', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ingresses, ingressClass, targetNamespace})
-      });
-      const results = await resp.json();
-      const ok = results.filter(r => r.success), fail = results.filter(r => !r.success);
-      let msg = `✓ Copied ${ok.length}/${results.length} ingress(es) to "${targetNamespace}"`;
-      if (fail.length > 0) { msg += `. Failures: ${fail.map(r => `${r.namespace}/${r.name} — ${r.error}`).join('; ')}`; showFeedback(msg, 'warning'); }
-      else { showFeedback(msg, 'success'); }
-      await loadIngresses();
-    } catch (e) { showFeedback('Request error: ' + e.message, 'error'); }
-  }
-
-  // ── Feedback ──────────────────────────────────────────────────────────────
-
-  let feedbackTimer = null;
-  function showFeedback(msg, type) {
-    const el = document.getElementById('feedback');
-    el.textContent = msg;
-    el.className = 'feedback ' + (type || '');
-    if (feedbackTimer) clearTimeout(feedbackTimer);
-    feedbackTimer = setTimeout(clearFeedback, 8000);
-  }
-  function clearFeedback() {
-    const el = document.getElementById('feedback');
-    el.textContent = '';
-    el.className = 'feedback';
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  function escHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function escAttr(str) {
-    if (!str) return '';
-    return String(str).replace(/"/g, '%22').replace(/'/g, '%27');
-  }
-
-  // ── Boot ──────────────────────────────────────────────────────────────────
-  loadIngresses();
 </script>
+
 </body>
 </html>
