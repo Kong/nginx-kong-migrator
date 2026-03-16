@@ -9,6 +9,99 @@ This tool automates the migration of Kubernetes Ingress resources from **NGINX I
 - **Full Coverage Testing**: Includes an End-to-End (E2E) test suite validating the migration against a live cluster.
 - **Safe Defaults**: Generates standard configuration while warning about incompatible or manual-intervention items.
 
+## UI Dashboard
+
+The migration tool includes a web-based dashboard that connects to your cluster and lets you browse, analyse, and migrate Ingress resources interactively.
+
+### Run locally with binary
+
+Download the binary from [the releases page](https://github.com/Kong/nginx-kong-migrator/releases), then start the dashboard:
+
+```bash
+./migrator ui
+```
+
+Optional flags:
+- `-port <int>` — port to listen on (default: `8080`)
+- `-namespace <string>` — restrict to a single namespace (default: all namespaces)
+- `-kubeconfig <string>` — path to kubeconfig (falls back to `$KUBECONFIG` or `~/.kube/config`)
+
+Example:
+```bash
+./migrator ui -port 9090 -namespace kong
+```
+
+Open [http://localhost:8080](http://localhost:8080) in your browser. The dashboard reads Ingress resources from your currently active cluster context and colour-codes each one:
+
+- **Green** — already migrated (non-NGINX ingress)
+- **Yellow** — ready to migrate, may have followup notes
+- **Red** — has unmigrated annotations that require manual intervention
+
+From the dashboard you can:
+- **Migrate Selected / Migrate Single** — applies the migration in-cluster: sets `ingressClassName: kong`, creates `KongPlugin` and `KongUpstreamPolicy` CRDs
+- **Copy to Namespace** — copies one or more ingresses (with their Kong resources) to a target namespace
+- **Download as Kong Ingress YAML / Gateway API YAML** — export the migrated manifests without applying them
+- **Refresh** — reload the ingress list from the cluster
+
+### Run locally with Docker (out-of-cluster)
+
+You can run the dashboard as a Docker container outside the cluster by mounting your kubeconfig:
+
+```bash
+docker run --rm \
+  -p 8080:8080 \
+  -e KUBECONFIG=/kubeconfig \
+  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
+  kong/nginx-kong-migrator:latest ui
+```
+
+Then open [http://localhost:8080](http://localhost:8080). The container reads the mounted kubeconfig to connect to whichever cluster context is currently active.
+
+To target a specific context, set it before running:
+
+```bash
+kubectl config use-context <your-context>
+docker run --rm \
+  -p 8080:8080 \
+  -e KUBECONFIG=/kubeconfig \
+  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
+  kong/nginx-kong-migrator:latest ui
+```
+
+### Deploy to Kubernetes
+
+The `deploy/kubernetes.yaml` manifest creates a dedicated `kong-migrator` namespace and installs all required resources (ServiceAccount, ClusterRole, ClusterRoleBinding, Deployment, Service):
+
+```bash
+kubectl apply -f deploy/kubernetes.yaml
+```
+
+Wait for the pod to become ready:
+
+```bash
+kubectl -n kong-migrator rollout status deployment/kong-migrator
+```
+
+#### Access the Dashboard
+
+Port-forward the service to your local machine:
+
+```bash
+kubectl -n kong-migrator port-forward svc/kong-migrator 8080:8080
+```
+
+Then open [http://localhost:8080](http://localhost:8080) in your browser. The dashboard reads Ingress resources across all namespaces using the pod's service account — no kubeconfig or extra credentials required.
+
+To restrict the dashboard to a single namespace, edit the Deployment and add `--namespace <your-namespace>` to the `args` list.
+
+### Uninstall
+
+```bash
+kubectl delete -f deploy/kubernetes.yaml
+```
+
+This removes all resources created by the manifest, including the `kong-migrator` namespace.
+
 ## Supported Annotations
 
 The tool supports **25+ NGINX Ingress annotations** across multiple categories:
@@ -86,7 +179,7 @@ The following annotations are detected but not automatically migrated:
 - `configuration-snippet` (non-header) - Complex snippets not supported
 - `modsecurity-*` - Third-party WAF integration required
 
-## Usage
+## CLI Usage
 
 ### Build
 ```bash
@@ -209,68 +302,6 @@ spec:
       weight: 20
 ```
 
-## UI Dashboard
-
-The migration tool includes a web-based dashboard that connects to your cluster and lets you browse, analyse, and migrate Ingress resources interactively.
-
-### Deploy to Kubernetes
-
-The `deploy/kubernetes.yaml` manifest creates a dedicated `kong-migrator` namespace and installs all required resources (ServiceAccount, ClusterRole, ClusterRoleBinding, Deployment, Service):
-
-```bash
-kubectl apply -f deploy/kubernetes.yaml
-```
-
-Wait for the pod to become ready:
-
-```bash
-kubectl -n kong-migrator rollout status deployment/kong-migrator
-```
-
-### Access the Dashboard
-
-Port-forward the service to your local machine:
-
-```bash
-kubectl -n kong-migrator port-forward svc/kong-migrator 8080:8080
-```
-
-Then open [http://localhost:8080](http://localhost:8080) in your browser. The dashboard reads Ingress resources across all namespaces using the pod's service account — no kubeconfig or extra credentials required.
-
-To restrict the dashboard to a single namespace, edit the Deployment and add `--namespace <your-namespace>` to the `args` list.
-
-### Run locally with Docker (out-of-cluster)
-
-You can run the dashboard as a Docker container outside the cluster by mounting your kubeconfig:
-
-```bash
-docker run --rm \
-  -p 8080:8080 \
-  -e KUBECONFIG=/kubeconfig \
-  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
-  kong/nginx-kong-migrator:latest ui
-```
-
-Then open [http://localhost:8080](http://localhost:8080). The container reads the mounted kubeconfig to connect to whichever cluster context is currently active.
-
-To target a specific context, set it before running:
-
-```bash
-kubectl config use-context <your-context>
-docker run --rm \
-  -p 8080:8080 \
-  -e KUBECONFIG=/kubeconfig \
-  -v "${KUBECONFIG:-$HOME/.kube/config}:/kubeconfig:ro" \
-  kong/nginx-kong-migrator:latest ui
-```
-
-### Uninstall
-
-```bash
-kubectl delete -f deploy/kubernetes.yaml
-```
-
-This removes all resources created by the manifest, including the `kong-migrator` namespace.
 
 ---
 
