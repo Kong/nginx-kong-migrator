@@ -46,7 +46,7 @@ jobs:
           BINARY_BASE="migrator_${VERSION}_${GOOS}_${GOARCH}"
 
           mkdir -p dist
-          go build -o "dist/${BINARY_BASE}" ./main.go
+          go build -ldflags="-X main.Version=${VERSION}" -o "dist/${BINARY_BASE}" ./main.go
 
           (cd dist && tar -czf "${BINARY_BASE}.tar.gz" "${BINARY_BASE}")
 
@@ -87,6 +87,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: VERSION=${{ github.ref_name }}
           tags: |
             kong/nginx-kong-migrator:${{ github.ref_name }}
             kong/nginx-kong-migrator:latest

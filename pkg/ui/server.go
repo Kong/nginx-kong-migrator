@@ -34,6 +34,7 @@ var templateFS embed.FS
 
 type srv struct {
 	namespace string
+	version   string
 	client    kubernetes.Interface
 	dynClient dynamic.Interface
 }
@@ -52,7 +53,7 @@ var (
 )
 
 // Start builds Kubernetes clients and starts the HTTP server on the given port.
-func Start(port int, namespace string, kubeconfig string) error {
+func Start(port int, namespace string, kubeconfig string, version string) error {
 	config, err := buildConfig(kubeconfig)
 	if err != nil {
 		return fmt.Errorf("failed to build kubeconfig: %w", err)
@@ -68,7 +69,7 @@ func Start(port int, namespace string, kubeconfig string) error {
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	s := &srv{namespace: namespace, client: client, dynClient: dynClient}
+	s := &srv{namespace: namespace, version: version, client: client, dynClient: dynClient}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
@@ -119,8 +120,9 @@ func (s *srv) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "template not found", http.StatusInternalServerError)
 		return
 	}
+	content := strings.ReplaceAll(string(data), "__APP_VERSION__", s.version)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(data)
+	w.Write([]byte(content))
 }
 
 func (s *srv) handleIngresses(w http.ResponseWriter, r *http.Request) {
