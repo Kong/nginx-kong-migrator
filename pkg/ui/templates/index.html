@@ -636,7 +636,7 @@
       },
 
       toggleSelectAll() {
-        const eligible = this.filteredIngresses.filter(i => i.status === 1);
+        const eligible = this.filteredIngresses.filter(i => i.status === 1 || i.status === 2);
         const copy     = { ...this.selectedRows };
         if (this.allEligibleSelected) {
           eligible.forEach(i => delete copy[i.namespace + '/' + i.name]);
