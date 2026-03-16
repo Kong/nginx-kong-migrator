@@ -12,7 +12,14 @@ import (
 	"nginx-kong-migrator/pkg/ui"
 )
 
+var Version = "dev"
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Println(Version)
+		return
+	}
+
 	// ui subcommand — spins up the local dashboard server
 	if len(os.Args) > 1 && os.Args[1] == "ui" {
 		uiFlags := flag.NewFlagSet("ui", flag.ExitOnError)
@@ -20,7 +27,7 @@ func main() {
 		namespace := uiFlags.String("namespace", "", "Kubernetes namespace to watch (empty = all namespaces)")
 		kubeconfig := uiFlags.String("kubeconfig", "", "Path to kubeconfig file (default: $KUBECONFIG or ~/.kube/config)")
 		uiFlags.Parse(os.Args[2:])
-		if err := ui.Start(*port, *namespace, *kubeconfig); err != nil {
+		if err := ui.Start(*port, *namespace, *kubeconfig, Version); err != nil {
 			log.Fatalf("ui server error: %v", err)
 		}
 		return
