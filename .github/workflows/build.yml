@@ -1,0 +1,59 @@
+name: Build (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      goos:
+        type: string
+        default: '["linux","darwin"]'
+      goarch:
+        type: string
+        default: '["amd64","arm64"]'
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        goos: ${{ fromJson(inputs.goos) }}
+        goarch: ${{ fromJson(inputs.goarch) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          set -eo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          BINARY_BASE="migrator_${VERSION}_${GOOS}_${GOARCH}"
+
+          mkdir -p dist
+          go build -ldflags="-X main.Version=${VERSION}" -o "dist/${BINARY_BASE}" ./main.go
+
+          (cd dist && tar -czf "${BINARY_BASE}.tar.gz" "${BINARY_BASE}")
+
+          rm "dist/${BINARY_BASE}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error

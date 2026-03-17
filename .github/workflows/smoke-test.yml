@@ -1,0 +1,23 @@
+name: Smoke Test (reusable)
+
+on:
+  workflow_call:
+
+jobs:
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download linux-amd64 artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: linux-amd64
+
+      - name: Extract and run version check
+        run: |
+          tar -xzf *.tar.gz
+          chmod +x migrator_*
+          ./migrator_* version
