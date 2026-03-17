@@ -16,6 +16,9 @@ jobs:
         with:
           name: linux-amd64
 
+      - name: List downloaded files (Debugging)
+        run: ls -R
+
       - name: Extract and run version check
         run: |
           tar -xzf *.tar.gz
