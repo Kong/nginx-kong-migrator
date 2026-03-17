@@ -12,59 +12,27 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Download modules
-        run: go mod download
-
-      - name: Run tests
-        run: go test -race -count=1 -coverprofile=coverage.out ./...
-
-      - name: Print coverage summary
-        run: go tool cover -func=coverage.out
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: coverage
-          path: coverage.out
-          retention-days: 7
-          if-no-files-found: warn
-
   lint:
-    name: Lint
-    runs-on: ubuntu-latest
     permissions:
       contents: read
+    uses: ./.github/workflows/__lint.yml
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+  test:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/__test.yml
 
-      - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
-        with:
-          go-version-file: go.mod
-          cache: true
+  build:
+    needs: [lint, test]
+    permissions:
+      contents: read
+    uses: ./.github/workflows/__build.yml
+    with:
+      goos: '["linux"]'
+      goarch: '["amd64"]'
 
-      - name: go vet
-        run: go vet ./...
-
-      - name: Check modules are tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
+  smoke-test:
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/__smoke-test.yml
