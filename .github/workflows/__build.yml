@@ -41,7 +41,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           set -eo pipefail
-          VERSION="${GITHUB_REF_NAME}"
+          VERSION=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
           BINARY_BASE="migrator_${VERSION}_${GOOS}_${GOARCH}"
 
           mkdir -p dist
