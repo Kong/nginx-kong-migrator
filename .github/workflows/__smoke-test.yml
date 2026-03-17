@@ -21,6 +21,8 @@ jobs:
 
       - name: Extract and run version check
         run: |
-          tar -xzf *.tar.gz
-          chmod +x migrator_*
-          ./migrator_* version
+          TAR=$(ls *.tar.gz)
+          tar -xzf "$TAR"
+          BINARY="${TAR%.tar.gz}"
+          chmod +x "$BINARY"
+          ./"$BINARY" version
