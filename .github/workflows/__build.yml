@@ -10,6 +10,9 @@ on:
         type: string
         default: '["amd64","arm64"]'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build ${{ matrix.goos }}-${{ matrix.goarch }}

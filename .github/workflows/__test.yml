@@ -3,6 +3,9 @@ name: Test (reusable)
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test
