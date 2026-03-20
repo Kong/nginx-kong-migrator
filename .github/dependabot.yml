@@ -17,5 +17,23 @@ updates:
       semver-patch-days: 3
       semver-minor-days: 7
       semver-major-days: 30
+    # Create a group of dependencies to be updated together in one pull request
+    groups:
+      # Specify a name for the group, which will be used in pull request titles and branch names
+      k8s.io:
+        # Define patterns to include dependencies in the group (based on dependency name)
+        applies-to: version-updates # Applies the group rule to version updates
+        patterns:
+          - "k8s.io/*"
+        exclude-patterns:
+          - k8s.io/klog/*
+          - k8s.io/utils
+          - k8s.io/kube-openapi
+      # Specify a name for the group, which will be used in pull request titles and branch names.
+      actions:
+        # Define patterns to include dependencies in the group (based on dependency name).
+        applies-to: version-updates # Applies the group rule to version updates.
+        patterns:
+          - "actions/*"
     labels:
       - "dependencies"
