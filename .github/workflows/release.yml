@@ -10,17 +10,25 @@ permissions:
 
 jobs:
   lint:
+    permissions:
+      contents: read
     uses: ./.github/workflows/__lint.yml
 
   test:
+    permissions:
+      contents: read
     uses: ./.github/workflows/__test.yml
 
   build:
     needs: [lint, test]
+    permissions:
+      contents: read
     uses: ./.github/workflows/__build.yml
 
   smoke-test:
     needs: build
+    permissions:
+      contents: read
     uses: ./.github/workflows/__smoke-test.yml
 
   docker:
