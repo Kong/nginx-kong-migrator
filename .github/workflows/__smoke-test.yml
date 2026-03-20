@@ -3,6 +3,9 @@ name: Smoke Test (reusable)
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   smoke-test:
     name: Smoke Test
