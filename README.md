@@ -312,7 +312,7 @@ The project includes a robust E2E test script `e2e-test.sh` that works with Orbs
 ### Prerequisites
 - Docker / Orbstack
 - Helm
-- Go 1.22+
+- Go 1.27+
 - `kubectl` configured for your cluster
 
 ### Running the Test
